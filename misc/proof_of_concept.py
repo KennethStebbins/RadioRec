@@ -38,8 +38,7 @@ def extract_streaming_url(driver):
     return driver.execute_script(js)
 
 opts = Options()
-# opts.set_headless()
-# assert opts.headless 
+opts.set_headless()
 browser = Firefox(options=opts)
 
 browser.get('https://player.listenlive.co/34461')
@@ -64,8 +63,6 @@ btnPlay.click()
 WebDriverWait(browser, 60).until(
     stream_has_started
 )
-
-print("Stream has started!!!")
 
 btnStop.click()
 
