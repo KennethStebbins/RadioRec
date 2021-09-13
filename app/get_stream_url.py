@@ -56,6 +56,7 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461') -> str
     adBreakTextSelector = (By.ID, 'td_nowplaying_bigbox_wrapper')
     btnPlaySelector = (By.ID, 'playButton')
     btnStopSelector = (By.ID, 'stopButton')
+    btnVolumeSelector = (By.ID, 'volumeButton')
 
     try:
         opts = Options()
@@ -66,8 +67,10 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461') -> str
         raise RuntimeError('Failed to initialize webdriver')
 
     try:
+        # Load the page
         browser.get(page_url)
 
+        # Get all of our buttons
         btnPlay = WebDriverWait(browser, 10).until(
             expected_conditions.presence_of_element_located(btnPlaySelector)
         )
@@ -75,24 +78,35 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461') -> str
         btnStop = WebDriverWait(browser, 10).until(
             expected_conditions.presence_of_element_located(btnStopSelector)
         )
+        
+        btnVolume = WebDriverWait(browser, 10).until(
+            expected_conditions.presence_of_element_located(btnVolumeSelector)
+        )
 
-        # Wait until the page is loaded enough to press play
+        # Wait until we can click the volume button, then click it to mute the stream
+        WebDriverWait(browser, 10).until(
+            expected_conditions.element_to_be_clickable(btnVolumeSelector)
+        )
+        btnVolume.click()
+
+        # Make sure the play button is clickable, then click it
         WebDriverWait(browser, 10).until(
             expected_conditions.element_to_be_clickable(btnPlaySelector)
         )
-
         btnPlay.click()
 
+        # Wait until it looks like the stream has started, then click the stop button
         WebDriverWait(browser, 60).until(
             stream_has_started
         )
-
         btnStop.click()
 
+        # Wait until the streaming URL appears in the browser's performance metrics
         WebDriverWait(browser, 10).until(
             lambda driver : extract_streaming_url(driver) != ''
         )
 
+        # Grab the raw streaming url
         result = extract_streaming_url(browser)
 
         log.debug(f"Found streaming URL: {result}")
