@@ -15,7 +15,7 @@ try:
             break
         
 
-    with open('./recorded.aac', 'wb') as f:
+    with open('./misc/output/recorded.aac', 'wb') as f:
         f.write(allTheBytes)
 finally:
     # req.close()
