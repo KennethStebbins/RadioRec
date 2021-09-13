@@ -4,6 +4,7 @@ URL = 'https://14543.live.streamtheworld.com/KMGLFMAAC.aac?pname=StandardPlayerV
 # URL = get_stream_url()
 
 try:
+    req = None
     req = requests.request('GET', URL, stream=True)
 
     counter = 0
@@ -18,5 +19,6 @@ try:
     with open('./misc/output/recorded.aac', 'wb') as f:
         f.write(allTheBytes)
 finally:
-    # req.close()
+    if req != None:
+        req.close()
     pass
