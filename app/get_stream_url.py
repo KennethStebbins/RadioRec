@@ -4,6 +4,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 
 from logging import getLogger
 
@@ -56,12 +57,13 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461') -> str
     adBreakTextSelector = (By.ID, 'td_nowplaying_bigbox_wrapper')
     btnPlaySelector = (By.ID, 'playButton')
     btnStopSelector = (By.ID, 'stopButton')
-    btnVolumeSelector = (By.ID, 'volumeButton')
 
     try:
         opts = Options()
         opts.set_headless()
-        browser = Firefox(options=opts)
+        profile = FirefoxProfile()
+        profile.set_preference('media.volume_scale', '0.0')
+        browser = Firefox(options=opts, firefox_profile=profile)
     except:
         log.exception("Failed to initialize webdriver")
         raise RuntimeError('Failed to initialize webdriver')
@@ -78,16 +80,6 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461') -> str
         btnStop = WebDriverWait(browser, 10).until(
             expected_conditions.presence_of_element_located(btnStopSelector)
         )
-        
-        btnVolume = WebDriverWait(browser, 10).until(
-            expected_conditions.presence_of_element_located(btnVolumeSelector)
-        )
-
-        # Wait until we can click the volume button, then click it to mute the stream
-        WebDriverWait(browser, 10).until(
-            expected_conditions.element_to_be_clickable(btnVolumeSelector)
-        )
-        btnVolume.click()
 
         # Make sure the play button is clickable, then click it
         WebDriverWait(browser, 10).until(

@@ -3,6 +3,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 
 nowPlayingCardSelector = (By.ID, 'nowPlayingDisplay')
 adBreakTextSelector = (By.ID, 'td_nowplaying_bigbox_wrapper')
@@ -37,9 +38,13 @@ def extract_streaming_url(driver):
     """
     return driver.execute_script(js)
 
+
+
 opts = Options()
-opts.set_headless()
-browser = Firefox(options=opts)
+# opts.set_headless()
+profile = FirefoxProfile()
+profile.set_preference('media.volume_scale', '0.0')
+browser = Firefox(options=opts, firefox_profile=profile)
 
 browser.get('https://player.listenlive.co/34461')
 
