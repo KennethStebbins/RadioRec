@@ -66,6 +66,20 @@ class TestByteBufferOversizedAppend(unittest.TestCase):
 
         self.assertSequenceEqual(self.bb.byte_array, expected)
 
+class TestByteBufferVeryOversizedAppend(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+    
+    def test_very_oversized_append(self):
+        data = b'123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        expected = b'QRSTUVWXYZ'
+
+        self.bb.append(data)
+
+        self.assertSequenceEqual(self.bb.byte_array, expected)
+
 class TestByteBufferOversizedOverflowAppend(unittest.TestCase):
     bb = None
 
