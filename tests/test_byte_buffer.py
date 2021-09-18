@@ -19,6 +19,8 @@ class TestByteBufferNormalAppend(unittest.TestCase):
         self.bb.append(data)
 
         self.assertSequenceEqual(self.bb.byte_array[0:5], data)
+        self.assertEqual(self.bb.max_index, 4)
+        self.assertEqual(self.bb.index, 5)
 
 class TestByteBufferAppendToFull(unittest.TestCase):
     bb = None
@@ -79,15 +81,45 @@ class TestByteBufferOversizedOverflowAppend(unittest.TestCase):
 
         self.assertSequenceEqual(self.bb.byte_array, expected)
 
-class TestByteBufferNormalRead(unittest.TestCase):
+class TestByteBufferFullRead(unittest.TestCase):
     bb = None
 
     def setUp(self) -> None:
         self.bb = ByteBuffer(10)
         self.bb.append(b'LUZ_NOCEDA')
     
-    def test_normal_read(self):
+    def test_full_read(self):
         expected = b'LUZ_NOCEDA'
+
+        result = self.bb.read()
+
+        self.assertSequenceEqual(result, expected)
+
+class TestByteBufferMiddleRead(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'WILLOW')
+        self.bb.append(b'THEWITCH')
+        # Expected byte buffer state: ITCHOWTHEW
+    
+    def test_middle_read(self):
+        expected = b'OWTHE'
+
+        result = self.bb.read(5)
+
+        self.assertSequenceEqual(result, expected)
+
+class TestByteBufferNotFullRead(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'King')
+    
+    def test_not_full_read(self):
+        expected = b'King'
 
         result = self.bb.read()
 
@@ -118,8 +150,22 @@ class TestByteBufferOversizedRead(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             self.bb.read(11)
 
-        self.assertEquals(cm.exception.args[0], 
+        self.assertEqual(cm.exception.args[0], 
             'Requested length is longer than the buffer length')
+
+class TestByteBufferOversizedNotFullRead(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'Gus')
+    
+    def test_oversized_read(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb.read(4)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Attempted to read more data than what exists in the buffer')
 
 if __name__ == '__main__':
     unittest.main()
