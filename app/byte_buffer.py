@@ -92,10 +92,6 @@ class ByteBuffer:
         try:
             self.byte_array_lock.acquire()
 
-            # new_index = self.index - length - 1
-            # if new_index < 0:
-            #     new_index += self.length
-            # self.index = new_index
             self.readable_length -= length
         finally:
             self.byte_array_lock.release()
