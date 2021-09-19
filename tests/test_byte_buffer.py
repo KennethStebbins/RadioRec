@@ -248,7 +248,7 @@ class TestByteBufferSeek(unittest.TestCase):
         self.bb = ByteBuffer(10)
         self.bb.append(b'SSBumbleby')
     
-    def test_not_full_read(self):
+    def test_seek(self):
         expected = b'by'
 
         self.bb.seek(8)
@@ -297,6 +297,63 @@ class TestByteBufferOverReadableLengthSeek(unittest.TestCase):
 
         self.assertEqual(cm.exception.args[0], 
             'Cannot seek past the data stored in the buffer')
+
+class TestByteBufferSeekToSeq(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(53)
+        self.bb.append(b'Great, the gang\'s all here! Now we can die together!')
+    
+    def test_seek_to_sequence(self):
+        expected = b'Now we can die together!'
+
+        self.bb.seekToSequence(b'Now')
+        result = self.bb.read()
+
+        self.assertSequenceEqual(result, expected)
+
+class TestByteBufferOversizedSeekToSequence(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(4)
+        self.bb.append(b'RUBY')
+    
+    def test_oversized_seek_to_sequence(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb.seekToSequence(b'RUBYROSE')
+
+        self.assertEqual(cm.exception.args[0], 
+            'Sequence is longer than buffer length')
+
+class TestByteBufferOverReadLengthSeekToSequence(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'RUBY')
+    
+    def test_over_read_length_seek_to_sequence(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb.seekToSequence(b'RUBYROSE')
+
+        self.assertEqual(cm.exception.args[0], 
+            'Sequence is longer than readable length')
+
+class TestByteBufferSeekToEmptySequence(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'RUBY')
+    
+    def test_seek_to_empty_sequence(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb.seekToSequence(b'')
+
+        self.assertEqual(cm.exception.args[0], 
+            'Sequence must not be empty')
 
 if __name__ == '__main__':
     unittest.main()
