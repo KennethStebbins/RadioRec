@@ -109,6 +109,20 @@ class TestByteBufferFullRead(unittest.TestCase):
 
         self.assertSequenceEqual(result, expected)
 
+class TestByteBufferZeroLengthRead(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'LUZ_NOCEDA')
+    
+    def test_zero_length_read(self):
+        expected = b''
+
+        result = self.bb.read(0)
+
+        self.assertSequenceEqual(result, expected)
+
 class TestByteBufferAlmostFullRead(unittest.TestCase):
     bb = None
 
@@ -219,13 +233,42 @@ class TestByteBufferReadFromEnd(unittest.TestCase):
         self.bb = ByteBuffer(10)
         self.bb.append(b'LUZ_NOCEDA')
     
-    def test_full_read(self):
+    def test_read_from_end(self):
         expected = b'NOCEDA'
 
         result = self.bb.readFromEnd(6)
 
         self.assertSequenceEqual(result, expected)
         self.assertEqual(self.bb.readable_length, 0)
+
+class TestByteBufferZeroLengthReadFromEnd(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'LUZ_NOCEDA')
+    
+    def test_zero_length_read_from_end(self):
+        expected = b'NOCEDA'
+
+        result = self.bb.readFromEnd(6)
+
+        self.assertSequenceEqual(result, expected)
+        self.assertEqual(self.bb.readable_length, 0)
+
+class TestByteBufferNegativeReadFromEnd(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'OWLLADYEDA')
+    
+    def test_negative_read_from_end(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb.readFromEnd(-1)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Length cannot be negative')
 
 class TestByteBufferOversizedRead(unittest.TestCase):
     bb = None
