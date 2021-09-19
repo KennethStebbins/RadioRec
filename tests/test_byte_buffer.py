@@ -19,7 +19,7 @@ class TestByteBufferNormalAppend(unittest.TestCase):
         self.bb.append(data)
 
         self.assertSequenceEqual(self.bb.byte_array[0:5], data)
-        self.assertEqual(self.bb.max_index, 4)
+        self.assertEqual(self.bb.readable_length, 5)
         self.assertEqual(self.bb.index, 5)
 
 class TestByteBufferAppendToFull(unittest.TestCase):
@@ -180,6 +180,63 @@ class TestByteBufferOversizedNotFullRead(unittest.TestCase):
 
         self.assertEqual(cm.exception.args[0], 
             'Attempted to read more data than what exists in the buffer')
+
+class TestByteBufferSeek(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'SSBumbleby')
+    
+    def test_not_full_read(self):
+        expected = b'by'
+
+        self.bb.seek(8)
+        result = self.bb.read()
+
+        self.assertSequenceEqual(result, expected)
+
+class TestByteBufferBackwardsSeek(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'LilithClawthorne')
+    
+    def test_backwards_seek(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb.seek(-1)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Cannot seek backwards')
+
+class TestByteBufferOverLengthSeek(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'blakebelladonna')
+    
+    def test_over_length_seek(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb.seek(11)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Cannot seek further than the length of the buffer')
+
+class TestByteBufferOverReadableLengthSeek(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'RUBY')
+    
+    def test_over_length_seek(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb.seek(5)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Cannot seek past the data stored in the buffer')
 
 if __name__ == '__main__':
     unittest.main()
