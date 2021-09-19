@@ -47,45 +47,70 @@ class ByteBuffer:
         finally:
             self.byte_array_lock.release()
 
-    def read(self, length : int = -1, consume : bool = True) -> bytearray:
-        if length <= 0 and self.readable_length == 0:
+    def __read(self, length : int, consume : bool = True) -> bytearray:
+        length_abs = abs(length)
+        if length_abs == 0:
             return bytearray(b'')
-        elif length > self.length:
+        elif length_abs > self.length:
             raise ValueError('Requested length is longer than the buffer length')
-        elif length > self.readable_length:
+        elif length_abs > self.readable_length:
             raise ValueError('Attempted to read more data than what exists in the buffer')
-            
+
         try:
             self.byte_array_lock.acquire()
-            
-            if length < 0:
-                length = self.readable_length
 
-            readi = self.index - self.readable_length
+            if length > 0:
+                readi = self.index - self.readable_length
+            else:
+                readi = self.index - length_abs
+            
             if readi < 0:
                 readi += self.length
 
-            response : bytearray = bytearray(length)
+            response : bytearray = bytearray(length_abs)
             responsei = 0     
 
-            if self.index - self.readable_length < 0:  
-                # If we need to wrap around
+            if readi >= self.index:  
+                # If we might need to wrap around
                 first_pass_len = self.length - readi
-                if first_pass_len > length:
-                    first_pass_len = length
+                if first_pass_len > length_abs:
+                    first_pass_len = length_abs
                 response[responsei:first_pass_len] = self.byte_array[readi:]
                 responsei = responsei + first_pass_len
                 readi = 0
             
-            response_remaining = length - responsei
+            response_remaining = length_abs - responsei
             response[responsei:] = self.byte_array[readi:readi + response_remaining]
 
             if consume:
-                self.readable_length -= length
+                if length < 0:
+                    self.seekToEnd()
+                else:
+                    self.seek(length_abs)
 
             return response
         finally:
             self.byte_array_lock.release()
+
+    def read(self, length : int = -1, consume : bool = True) -> bytearray:
+        if length <= 0 and self.readable_length == 0:
+            return bytearray(b'')
+            
+        try:
+            self.byte_array_lock.acquire()
+
+            if length < 0:
+                length = self.readable_length
+
+            return self.__read(length, consume=consume)
+        finally:
+            self.byte_array_lock.release()
+
+    def readFromEnd(self, length : int, consume : bool = True) -> bytearray:
+        if length < 0:
+            raise ValueError('Length cannot be negative')
+        
+        return self.__read(length * -1, consume=consume)
 
     def seek(self, length : int):
 

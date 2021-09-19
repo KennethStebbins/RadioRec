@@ -210,6 +210,22 @@ class TestByteBufferOversizedMultipleAutomaticSizeReads(unittest.TestCase):
         result = self.bb.read()
 
         self.assertSequenceEqual(result, expected)
+        self.assertEqual(self.bb.readable_length, 0)
+
+class TestByteBufferReadFromEnd(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'LUZ_NOCEDA')
+    
+    def test_full_read(self):
+        expected = b'NOCEDA'
+
+        result = self.bb.readFromEnd(6)
+
+        self.assertSequenceEqual(result, expected)
+        self.assertEqual(self.bb.readable_length, 0)
 
 class TestByteBufferOversizedRead(unittest.TestCase):
     bb = None
