@@ -109,6 +109,20 @@ class TestByteBufferFullRead(unittest.TestCase):
 
         self.assertSequenceEqual(result, expected)
 
+class TestByteBufferAlmostFullRead(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(11)
+        self.bb.append(b'LUZ_NOCEDA')
+    
+    def test_almost_full_read(self):
+        expected = b'LUZ_NOCEDA'
+
+        result = self.bb.read()
+
+        self.assertSequenceEqual(result, expected)
+
 class TestByteBufferMiddleRead(unittest.TestCase):
     bb = None
 
@@ -302,7 +316,7 @@ class TestByteBufferSeekToSeq(unittest.TestCase):
     bb = None
 
     def setUp(self) -> None:
-        self.bb = ByteBuffer(53)
+        self.bb = ByteBuffer(52)
         self.bb.append(b'Great, the gang\'s all here! Now we can die together!')
     
     def test_seek_to_sequence(self):
