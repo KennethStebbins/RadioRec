@@ -91,7 +91,7 @@ class ByteBuffer:
 
         if length < 0:
             raise ValueError('Cannot seek backwards')
-        elif length >= self.length:
+        elif length > self.length:
             raise ValueError('Cannot seek further than the length of the buffer')
         elif length > self.readable_length:
             raise ValueError('Cannot seek past the data stored in the buffer')
@@ -100,6 +100,14 @@ class ByteBuffer:
             self.byte_array_lock.acquire()
 
             self.readable_length -= length
+        finally:
+            self.byte_array_lock.release()
+
+    def seekToEnd(self):
+        try:
+            self.byte_array_lock.acquire()
+
+            self.seek(self.readable_length)
         finally:
             self.byte_array_lock.release()
     

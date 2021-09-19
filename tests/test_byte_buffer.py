@@ -312,6 +312,22 @@ class TestByteBufferOverReadableLengthSeek(unittest.TestCase):
         self.assertEqual(cm.exception.args[0], 
             'Cannot seek past the data stored in the buffer')
 
+class TestByteBufferSeekToEnd(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'BakedAlaska')
+    
+    def test_seek_to_end(self):
+        expected = b'YangAndNeo'
+
+        self.bb.seekToEnd()
+        self.bb.append(b'YangAndNeo')
+        result = self.bb.read()
+
+        self.assertSequenceEqual(result, expected)
+
 class TestByteBufferSeekToSeq(unittest.TestCase):
     bb = None
 
