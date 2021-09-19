@@ -47,8 +47,10 @@ class ByteBuffer:
         finally:
             self.byte_array_lock.release()
 
-    def read(self, length : int = -1) -> bytearray:
-        if length > self.length:
+    def read(self, length : int = -1, consume : bool = True) -> bytearray:
+        if length <= 0 and self.readable_length == 0:
+            return bytearray(b'')
+        elif length > self.length:
             raise ValueError('Requested length is longer than the buffer length')
         elif length > self.readable_length:
             raise ValueError('Attempted to read more data than what exists in the buffer')
@@ -76,8 +78,11 @@ class ByteBuffer:
             response_remaining = length - responsei
             response[responsei:] = self.byte_array[readi:readi + response_remaining]
 
+            if consume:
+                self.readable_length -= length
+
             return response
-        except:
+        finally:
             self.byte_array_lock.release()
 
     def seek(self, length : int):

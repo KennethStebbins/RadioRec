@@ -153,6 +153,50 @@ class TestByteBufferWraparoundRead(unittest.TestCase):
 
         self.assertSequenceEqual(result, expected)
 
+class TestByteBufferNoConsumeMultipleReads(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(12)
+        self.bb.append(b'WinterSchnee')
+    
+    def test_wraparound_read(self):
+        firstResult = self.bb.read(consume=False)
+        secondResult = self.bb.read(consume=False)
+
+        self.assertSequenceEqual(firstResult, secondResult)
+
+class TestByteBufferMultipleReads(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(11)
+        self.bb.append(b'PyrrhaNikos')
+    
+    def test_multiple_reads(self):
+        expected = (b'Pyrrha', b'Nikos')
+
+        firstResult = self.bb.read(6)
+        secondResult = self.bb.read(5)
+
+        self.assertSequenceEqual(firstResult, expected[0])
+        self.assertSequenceEqual(secondResult, expected[1])
+
+class TestByteBufferOversizedMultipleAutomaticSizeReads(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(14)
+        self.bb.append(b'PennyPolendina')
+    
+    def test_oversized_multiple_automatic_size_reads(self):
+        expected = b''
+
+        self.bb.read()
+        result = self.bb.read()
+
+        self.assertSequenceEqual(result, expected)
+
 class TestByteBufferOversizedRead(unittest.TestCase):
     bb = None
 
@@ -177,6 +221,22 @@ class TestByteBufferOversizedNotFullRead(unittest.TestCase):
     def test_oversized_read(self):
         with self.assertRaises(ValueError) as cm:
             self.bb.read(4)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Attempted to read more data than what exists in the buffer')
+
+class TestByteBufferOversizedErrorFromMulitpleReads(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(12)
+        self.bb.append(b'NoraValkryie')
+    
+    def test_oversized_error_from_multiple_reads(self):
+        self.bb.read()
+
+        with self.assertRaises(ValueError) as cm:
+            self.bb.read(1)
 
         self.assertEqual(cm.exception.args[0], 
             'Attempted to read more data than what exists in the buffer')
