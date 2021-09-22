@@ -13,6 +13,7 @@ class RadioStream(Thread):
     def __init__(self) -> None:
         self.byte_buffer = ByteBuffer()
         self.url = get_stream_url()
+        super().__init__()
 
     def run(self):
         with request('GET', self.url, stream=True) as r:
