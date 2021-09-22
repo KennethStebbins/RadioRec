@@ -1,3 +1,4 @@
+from requests.api import head
 from selenium.webdriver import Firefox
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -10,7 +11,7 @@ from logging import getLogger
 
 log = getLogger('radiorec')
 
-def get_stream_url(page_url : str = 'https://player.listenlive.co/34461') -> str:
+def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headless : bool = True) -> str:
     """
     Loads a player.listenlive.co webpage and extracts a raw streaming URL from it
 
@@ -60,7 +61,7 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461') -> str
 
     try:
         opts = Options()
-        opts.set_headless()
+        opts.headless = headless
         profile = FirefoxProfile()
         profile.set_preference('media.volume_scale', '0.0')
         browser = Firefox(options=opts, firefox_profile=profile)
