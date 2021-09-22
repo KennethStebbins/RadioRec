@@ -1,4 +1,5 @@
 from threading import RLock
+from typing import Tuple
 
 class ByteBuffer:
     byte_array : bytearray = None
@@ -47,73 +48,133 @@ class ByteBuffer:
         finally:
             self.byte_array_lock.release()
 
-    def __read(self, length : int, consume : bool = True) -> bytearray:
-        length_abs = abs(length)
-        if length_abs == 0:
-            return bytearray(b'')
-        elif length_abs > self.length:
+    def __getFirstReadIndex(self) -> int:
+        with self.byte_array_lock:
+            readi = self.index - self.readable_length
+            if readi < 0:
+                readi += self.length
+            return readi
+    
+    def __getReadIndexFromEnd(self, length_from_end : int) -> int:
+        with self.byte_array_lock:
+            readi = self.index - length_from_end
+            if readi < 0:
+                readi += self.length
+            return readi
+
+    def __findStopIndex(self, start : int, length : int) -> int:
+        if start < 0:
+            raise ValueError('Starting index cannot be negative')
+        elif start >= self.length:
+            raise ValueError('Start index exceeds buffer length')
+        
+        if length == 0:
+            raise ValueError('Length cannot be zero')
+        elif length < 0:
+            raise ValueError('Length cannot be negative')
+        elif length > self.length:
             raise ValueError('Requested length is longer than the buffer length')
-        elif length_abs > self.readable_length:
-            raise ValueError('Attempted to read more data than what exists in the buffer')
+        elif length > self.readable_length:
+            raise ValueError('Requested length is longer than what exists in the buffer')
+        
+        stop = start + length - 1
+        if stop + 1 > self.length:
+            stop -= self.length
+
+        return stop
+    
+    def __getReadBounds(self) -> Tuple[int, int]:
+        firstReadIndex = self.__getFirstReadIndex()
+        lastReadIndex = self.index - 1
+        if lastReadIndex < 0:
+            lastReadIndex = self.length - 1
+        
+        return (firstReadIndex, lastReadIndex)
+
+    def __isWithinReadBounds(self, start : int, length : int) -> int:
+        if start < 0:
+            raise ValueError('Starting index cannot be negative')
+        elif start >= self.length:
+            raise ValueError('Start index exceeds buffer length')
+        
+        if length == 0:
+            raise ValueError('Length cannot be zero')
+        elif length < 0:
+            raise ValueError('Length cannot be negative')
+        elif length > self.length:
+            raise ValueError('Requested length is longer than the buffer length')
+        elif length > self.readable_length:
+            raise ValueError('Requested length is longer than what exists in the buffer')
+
+        with self.byte_array_lock:
+            firstReadIndex, lastReadIndex = self.__getReadBounds()
+            stop = self.__findStopIndex(start, length)
+
+            if lastReadIndex < firstReadIndex: # If the read range wraps
+                return start >= firstReadIndex and \
+                    (stop <= self.length or stop <= lastReadIndex)
+            else:
+                return start >= firstReadIndex and stop <= lastReadIndex
+
+    def __read(self, start : int, length : int, consume : bool = True) -> bytearray:        
+        if length == 0:
+            return bytearray(b'')
+        
+        if not self.__isWithinReadBounds(start, length):
+            raise ValueError('Given start point and length are not within read bounds')
 
         try:
             self.byte_array_lock.acquire()
 
-            if length > 0:
-                readi = self.index - self.readable_length
-            else:
-                readi = self.index - length_abs
-            
-            if readi < 0:
-                readi += self.length
+            readi = start
 
-            response : bytearray = bytearray(length_abs)
+            response : bytearray = bytearray(length)
             responsei = 0     
 
             if readi >= self.index:  
                 # If we might need to wrap around
                 first_pass_len = self.length - readi
-                if first_pass_len > length_abs:
-                    first_pass_len = length_abs
+                if first_pass_len > length:
+                    first_pass_len = length
                 response[responsei:first_pass_len] = self.byte_array[readi:]
                 responsei = responsei + first_pass_len
                 readi = 0
             
-            response_remaining = length_abs - responsei
+            response_remaining = length - responsei
             response[responsei:] = self.byte_array[readi:readi + response_remaining]
 
             if consume:
-                if length < 0:
-                    self.seekToEnd()
-                else:
-                    self.seek(length_abs)
+                newReadingIndex = self.__findStopIndex(start, length) + 1
+                if newReadingIndex == self.length:
+                    newReadingIndex = 0
+                self.__seekToIndex(newReadingIndex)
 
             return response
         finally:
             self.byte_array_lock.release()
 
-    def read(self, length : int = -1, consume : bool = True) -> bytearray:
-        if length <= 0 and self.readable_length == 0:
-            return bytearray(b'')
-            
-        try:
-            self.byte_array_lock.acquire()
+    def read(self, length : int = -1, consume : bool = True) -> bytearray:        
+        with self.byte_array_lock:
+            start = self.__getFirstReadIndex()
 
             if length < 0:
                 length = self.readable_length
+            
+            return self.__read(start, length, consume=consume)
 
-            return self.__read(length, consume=consume)
-        finally:
-            self.byte_array_lock.release()
 
     def readFromEnd(self, length : int, consume : bool = True) -> bytearray:
-        if length < 0:
-            raise ValueError('Length cannot be negative')
-        
-        return self.__read(length * -1, consume=consume)
+        if length == 0:
+            raise ValueError("Length cannot be zero")
+        elif length < 0:
+            raise ValueError("Length cannot be negative")
 
-    def seek(self, length : int):
+        with self.byte_array_lock:
+            start = self.__getReadIndexFromEnd(length)
+                
+            return self.__read(start, length, consume=consume)
 
+    def seek(self, length : int) -> None:
         if length < 0:
             raise ValueError('Cannot seek backwards')
         elif length > self.length:
@@ -121,31 +182,30 @@ class ByteBuffer:
         elif length > self.readable_length:
             raise ValueError('Cannot seek past the data stored in the buffer')
         
-        try:
-            self.byte_array_lock.acquire()
-
+        with self.byte_array_lock:
             self.readable_length -= length
-        finally:
-            self.byte_array_lock.release()
 
-    def seekToEnd(self):
-        try:
-            self.byte_array_lock.acquire()
-
+    def seekToEnd(self) -> None:
+        with self.byte_array_lock:
             self.seek(self.readable_length)
-        finally:
-            self.byte_array_lock.release()
-    
-    def seekToSequence(self, seq : bytes):
-        seq_len = len(seq)
 
-        if seq_len == 0:
-            raise ValueError('Sequence must not be empty')
-        elif seq_len > self.length:
-            raise ValueError('Sequence is longer than buffer length')
-        elif seq_len > self.readable_length:
-            raise ValueError('Sequence is longer than readable length')
-        
+    def __seekToIndex(self, index : int) -> None:
+        if index < 0:
+            raise ValueError('Index cannot be zero')
+        elif index >= self.length:
+            raise ValueError('Index exceeds buffer length')
+
+        with self.byte_array_lock:
+            if index == self.index:
+                self.readable_length = 0
+            elif not self.__isWithinReadBounds(index, 1):
+                raise ValueError('Index is not within read bounds')
+            elif self.index >= index:
+                self.readable_length = self.index - index
+            else:
+                self.readable_length = self.length - index + self.index
+    
+    def seekToSequence(self, seq : bytes):        
         index = 0
 
         try:

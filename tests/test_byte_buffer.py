@@ -296,7 +296,7 @@ class TestByteBufferOversizedNotFullRead(unittest.TestCase):
             self.bb.read(4)
 
         self.assertEqual(cm.exception.args[0], 
-            'Attempted to read more data than what exists in the buffer')
+            'Requested length is longer than what exists in the buffer')
 
 class TestByteBufferOversizedErrorFromMulitpleReads(unittest.TestCase):
     bb = None
@@ -312,7 +312,7 @@ class TestByteBufferOversizedErrorFromMulitpleReads(unittest.TestCase):
             self.bb.read(1)
 
         self.assertEqual(cm.exception.args[0], 
-            'Attempted to read more data than what exists in the buffer')
+            'Requested length is longer than what exists in the buffer')
 
 class TestByteBufferSeek(unittest.TestCase):
     bb = None
