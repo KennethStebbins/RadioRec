@@ -208,7 +208,7 @@ class ByteBuffer:
             else:
                 self.readable_length = self.length - index + self.index
     
-    def __findSequence(self, seq : bytes):
+    def __findSequence(self, seq : bytes, match_len_step : int = 1000):
         seq_len = len(seq)
         if seq_len == 0:
             raise ValueError('Sequence cannot be empty')
@@ -235,7 +235,9 @@ class ByteBuffer:
                 isMatch = True
                 bestMatchLen = 0
                 while isMatch and bestMatchLen < seq_len:
-                    matchLen = bestMatchLen + 1
+                    matchLen = bestMatchLen + match_len_step
+                    if matchLen > seq_len:
+                        matchLen = seq_len
                     readBytes = self.__read(i, matchLen, consume=False)
                     isMatch = seq[:matchLen] == readBytes
                     bestMatchLen += 1
