@@ -78,7 +78,7 @@ class ByteBuffer:
             raise ValueError('Requested length is longer than what exists in the buffer')
         
         stop = start + length - 1
-        if stop + 1 > self.length:
+        if stop >= self.length:
             stop -= self.length
 
         return stop
@@ -114,8 +114,8 @@ class ByteBuffer:
             stop = self.__findStopIndex(start, length)
 
             if lastReadIndex < firstReadIndex: # If the read range wraps
-                return start >= firstReadIndex and \
-                    (stop <= self.length or stop <= lastReadIndex)
+                return (start >= firstReadIndex or start <= lastReadIndex) and \
+                    (stop < self.length or stop <= lastReadIndex)
             else:
                 return start >= firstReadIndex and stop <= lastReadIndex
 
