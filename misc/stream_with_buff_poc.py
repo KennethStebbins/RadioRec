@@ -52,9 +52,9 @@ def go() -> None:
     except ValueError:
         print("Whoops!")
     
-    log.debug('Waiting 10 seconds...')
-    time.sleep(10)
-    log.debug('Done waiting 10 seconds...')
+    log.debug('Waiting 90 seconds...')
+    time.sleep(90)
+    log.debug('Done waiting 90 seconds...')
 
     log.debug('Reading stream 1')
     s1res = streamOne.byte_buffer.read()
