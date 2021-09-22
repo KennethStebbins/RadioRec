@@ -10,8 +10,8 @@ class RadioStream(Thread):
     byte_buffer : ByteBuffer = None
     url : str = None
 
-    def __init__(self) -> None:
-        self.byte_buffer = ByteBuffer()
+    def __init__(self, buffer_size : int = 307200) -> None:
+        self.byte_buffer = ByteBuffer(buffer_size)
         self.url = get_stream_url()
         super().__init__()
 
