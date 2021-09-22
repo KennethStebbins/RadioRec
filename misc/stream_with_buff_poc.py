@@ -13,8 +13,10 @@ log.addHandler(consoleHandler)
 
 def go() -> None:
     log.debug('Creating stream one')
-    streamOne = RadioStream()
-    log.debug('Stream one created')
+    startingTime = time.time()
+    streamOne = RadioStream(daemon=True)
+    endingTime = time.time()
+    log.debug(f'Stream one created. Took {endingTime-startingTime} seconds.')
     streamOne.start()
     log.debug('Started stream one')
 
@@ -24,33 +26,22 @@ def go() -> None:
     log.debug('Done waiting 10 seconds...')
 
     log.debug('Creating stream two')
-    streamTwo = RadioStream()
+    streamTwo = RadioStream(daemon=True)
     log.debug('Stream two created')
     streamTwo.start()
     log.debug('Started stream two')
 
     # Skip the pre-roll ad
-    log.debug('Waiting 20 seconds...')
-    time.sleep(20)
-    log.debug('Done waiting 20 seconds...')
+    log.debug('Waiting 45 seconds...')
+    time.sleep(45)
+    log.debug('Done waiting 45 seconds...')
 
-    # Dump everything recorded thus far
-    streamOne.byte_buffer.seekToEnd()
-    streamTwo.byte_buffer.seekToEnd()
-    log.debug('Seeked to end of both streams')
-
-    log.debug('Waiting 15 seconds...')
-    time.sleep(15)
-    log.debug('Done waiting 15 seconds...')
-
-    syncBytes = streamOne.byte_buffer.readFromEnd(1000, consume=False)
-    try:
-        log.debug('Seeking to sync bytes on stream two...')
-        streamTwo.byte_buffer.seekToSequence(syncBytes)
-        log.debug('Seeking to sync bytes on stream one...')
-        streamOne.byte_buffer.seekToSequence(syncBytes)
-    except ValueError:
-        print("Whoops!")
+    syncBytes = streamOne.byte_buffer.readFromEnd(50000, consume=False)
+    syncBytes = syncBytes[:47000]
+    log.debug('Seeking to sync bytes on stream two...')
+    streamTwo.byte_buffer.seekToSequence(syncBytes)
+    log.debug('Seeking to sync bytes on stream one...')
+    streamOne.byte_buffer.seekToSequence(syncBytes)
     
     log.debug('Waiting 90 seconds...')
     time.sleep(90)
