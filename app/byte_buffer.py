@@ -84,6 +84,9 @@ class ByteBuffer:
         return stop
     
     def __getReadBounds(self) -> Tuple[int, int]:
+        if self.readable_length == 0:
+            raise ValueError('There is no readable data in the buffer')
+        
         firstReadIndex = self.__getFirstReadIndex()
         lastReadIndex = self.index - 1
         if lastReadIndex < 0:
@@ -213,7 +216,7 @@ class ByteBuffer:
             raise ValueError('Sequence cannot be longer than buffer length')
         elif seq_len > self.readable_length:
             raise ValueError('Sequence is longer than readable length')
-        
+
         try:
             seq = bytearray(seq)
 
@@ -248,17 +251,11 @@ class ByteBuffer:
         finally:
             self.byte_array_lock.release()
 
-    def seekToSequence(self, seq : bytes):        
-        index = 0
-
-        try:
-            self.byte_array_lock.acquire()
-
+    def seekToSequence(self, seq : bytes):
+        with self.byte_array_lock:
             index = self.__findSequence(seq)
             
             if index >= 0:
                 self.__seekToIndex(index)
             else:
                 raise ValueError('Sequence not found')
-        finally:
-            self.byte_array_lock.release()
