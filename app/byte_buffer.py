@@ -205,22 +205,60 @@ class ByteBuffer:
             else:
                 self.readable_length = self.length - index + self.index
     
+    def __findSequence(self, seq : bytes):
+        seq_len = len(seq)
+        if seq_len == 0:
+            raise ValueError('Sequence cannot be empty')
+        elif seq_len > self.length:
+            raise ValueError('Sequence cannot be longer than buffer length')
+        elif seq_len > self.readable_length:
+            raise ValueError('Sequence is longer than readable length')
+        
+        try:
+            seq = bytearray(seq)
+
+            self.byte_array_lock.acquire()
+
+            firstReadi, lastReadi = self.__getReadBounds()
+
+            if firstReadi < lastReadi:
+                possibleIndexes = range(firstReadi, lastReadi + 1)
+            else:
+                possibleIndexes = list(range(firstReadi, self.length))
+                possibleIndexes += list(range(0, lastReadi + 1))
+            
+            matchingIndex = -1
+            for i in possibleIndexes:
+                isMatch = True
+                bestMatchLen = 0
+                while isMatch and bestMatchLen < seq_len:
+                    matchLen = bestMatchLen + 1
+                    readBytes = self.__read(i, matchLen, consume=False)
+                    isMatch = seq[:matchLen] == readBytes
+                    bestMatchLen += 1
+                    if not isMatch:
+                        break
+                
+                if isMatch:
+                    matchingIndex = i
+                    break
+            
+            return matchingIndex
+
+        finally:
+            self.byte_array_lock.release()
+
     def seekToSequence(self, seq : bytes):        
         index = 0
 
         try:
             self.byte_array_lock.acquire()
 
-            try:
-                index = self.byte_array.index(seq)
-            except ValueError:
-                raise ValueError('Sequence not found in buffer')
+            index = self.__findSequence(seq)
             
-            if index > self.index:
-                desired_readable_len = self.length - index + self.index
+            if index >= 0:
+                self.__seekToIndex(index)
             else:
-                desired_readable_len = self.index - index
-            
-            self.seek(self.readable_length - desired_readable_len)
+                raise ValueError('Sequence not found')
         finally:
             self.byte_array_lock.release()

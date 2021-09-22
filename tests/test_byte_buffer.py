@@ -387,7 +387,7 @@ class TestByteBufferSeekToEnd(unittest.TestCase):
 
         self.assertSequenceEqual(result, expected)
 
-class TestByteBufferSeekToSeq(unittest.TestCase):
+class TestByteBufferSeekToSequence(unittest.TestCase):
     bb = None
 
     def setUp(self) -> None:
@@ -399,7 +399,23 @@ class TestByteBufferSeekToSeq(unittest.TestCase):
 
         self.bb.seekToSequence(b'Now')
         result = self.bb.read()
+        self.assertSequenceEqual(result, expected)
 
+class TestByteBufferSeekToSequenceWraparound(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(40)
+        self.bb.append(b'Great, the gang\'s all here!')
+        self.bb.append(b'Now we can die together!')
+    
+    def test_seek_to_sequence(self):
+        expected = b'Now we can die together!'
+
+        self.bb.seekToSequence(b'Now')
+        result = self.bb.read()
+
+        self.assertSequenceEqual(self.bb.byte_array, b'e together!gang\'s all here!Now we can di')
         self.assertSequenceEqual(result, expected)
 
 class TestByteBufferOversizedSeekToSequence(unittest.TestCase):
@@ -414,7 +430,7 @@ class TestByteBufferOversizedSeekToSequence(unittest.TestCase):
             self.bb.seekToSequence(b'RUBYROSE')
 
         self.assertEqual(cm.exception.args[0], 
-            'Sequence is longer than buffer length')
+            'Sequence cannot be longer than buffer length')
 
 class TestByteBufferOverReadLengthSeekToSequence(unittest.TestCase):
     bb = None
@@ -442,7 +458,7 @@ class TestByteBufferSeekToEmptySequence(unittest.TestCase):
             self.bb.seekToSequence(b'')
 
         self.assertEqual(cm.exception.args[0], 
-            'Sequence must not be empty')
+            'Sequence cannot be empty')
 
 if __name__ == '__main__':
     unittest.main()
