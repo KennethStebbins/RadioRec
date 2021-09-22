@@ -89,7 +89,7 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headle
         btnPlay.click()
 
         # Wait until it looks like the stream has started, then click the stop button
-        WebDriverWait(browser, 60).until(
+        WebDriverWait(browser, 30).until(
             stream_has_started
         )
         btnStop.click()
@@ -107,7 +107,7 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headle
         return result
     except TimeoutException as e:
         log.exception("An expected condition did not become true within the allotted timeout period.")
-        raise RuntimeError("Failed to extract streaming URL")
+        raise e
     except:
         log.exception("An unexpected exception occurred while extracting the streaming URL")
         raise RuntimeError("Failed to extract streaming URL")
