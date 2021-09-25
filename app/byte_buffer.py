@@ -289,7 +289,7 @@ class ByteBuffer:
                     readBytes = self.__read(i, matchLen, consume=False)
                     isMatch = seq[:matchLen] == readBytes
 
-                    bestMatchLen += 1
+                    bestMatchLen = matchLen
 
                     if not isMatch:
                         log.debug("Sequence did not match")
