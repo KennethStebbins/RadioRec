@@ -1,5 +1,13 @@
 from app.byte_buffer import ByteBuffer
 import unittest
+import logging
+from sys import stdout
+
+log = logging.getLogger('RadioRec')
+log.setLevel(logging.DEBUG)
+
+consoleHandler = logging.StreamHandler(stdout)
+consoleHandler.setLevel(logging.DEBUG)
 
 class TestByteBufferCreation(unittest.TestCase):
     def test_creation(self):
