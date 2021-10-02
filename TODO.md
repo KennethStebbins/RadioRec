@@ -1,0 +1,10 @@
+- [ ] Refactor ByteBuffer to use private variables properly and expose some as properties
+    - Things that should be properties:
+        - byte_array (ro)
+        - write_lock (ro)
+        - consume_lock (ro)
+        - length (ro)
+        - readable_length (ro)
+- [ ] Write unit tests for new ByteBuffer functionality
+- [ ] Write unit tests for new RadioStream and RadioStream-related functionality
+- [ ] Write StreamRecorder that will write the data from a RadioStream or RedundantRadioStream to disk
