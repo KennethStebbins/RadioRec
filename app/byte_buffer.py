@@ -275,20 +275,7 @@ class ByteBuffer:
             if consume:
                 self._consume_lock.release()
     
-    def waitUntilLengthAvailable(self, length : int) -> None:
-        if length < 0:
-            raise ValueError("Length cannot be negative")
-        elif length > self._length:
-            raise ValueError("Length is longer than buffer length")
-        
-        event = Event()
-        with self._consume_lock:
-            if self._readable_length >= length:
-                return
-            
-            event.wait(0.25)
-    
-    def _seekTo(self, length : int, wait : bool = False) -> None:
+    def _seekTo(self, length : int) -> None:
         if length < 0:
             raise ValueError("Length cannot be negative")
         elif length > self._length:
@@ -296,10 +283,7 @@ class ByteBuffer:
         
         with self._write_lock, self._consume_lock:
             if length > self._readable_length:
-                if wait:
-                    self.waitUntilLengthAvailable(length)
-                else:
-                    raise ValueError("Length is longer than current readable length")
+                raise ValueError("Length is longer than current readable length")
             
             self._readable_length = length
 
