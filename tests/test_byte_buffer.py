@@ -95,6 +95,565 @@ class TestByteBufferOversizedOverflowAppend(unittest.TestCase):
 
         self.assertSequenceEqual(self.bb.byte_array, expected)
 
+class TestByteBufferGetFirstReadIndex(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_get_first_read_index(self):
+        expected = 0
+
+        result = self.bb._getFirstReadIndex()
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferGetFirstReadIndexWrapped(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+        self.bb.append(b'READY')
+    
+    def test_get_first_read_index_wrapped(self):
+        expected = 3
+
+        result = self.bb._getFirstReadIndex()
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferGetReadIndexFromEnd(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_get_read_index_from_end(self):
+        expected = 3
+
+        result = self.bb._getReadIndexFromEnd(5)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferGetReadIndexFromEndWrapped(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+        self.bb.append(b'READY')
+    
+    def test_get_read_index_from_end_wrapped(self):
+        expected = 8
+
+        result = self.bb._getReadIndexFromEnd(5)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferGetReadIndexFromEndFullBuffer(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED!!')
+    
+    def test_get_read_index_from_end_full_buffer(self):
+        expected = 5
+
+        result = self.bb._getReadIndexFromEnd(5)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferGetReadIndexFromEndFullLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_get_read_index_from_end_full_length(self):
+        expected = 0
+
+        result = self.bb._getReadIndexFromEnd(8)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferGetReadIndexFromEndZeroLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_get_read_index_from_end_zero_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._getReadIndexFromEnd(0)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Length cannot be zero')
+
+class TestByteBufferGetReadIndexFromEndNegativeLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_get_read_index_from_end_negative_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._getReadIndexFromEnd(-1)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Length cannot be negative')
+
+class TestByteBufferGetReadIndexFromEndOverBufferLenLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED!!')
+    
+    def test_get_read_index_from_end_over_buffer_len_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._getReadIndexFromEnd(11)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Requested length is longer than the buffer length')
+
+class TestByteBufferGetReadIndexFromEndOverReadableLenLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_get_read_index_from_end_over_readable_len_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._getReadIndexFromEnd(10)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Requested length is longer than what exists in the buffer')
+
+class TestByteBufferFindStopIndex(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_find_stop_index(self):
+        expected = 2
+
+        result = self.bb._findStopIndex(0, 3)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferFindStopIndexMaxReadable(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_find_stop_index_max_readable(self):
+        expected = 7
+
+        result = self.bb._findStopIndex(0, 8)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferFindStopIndexMax(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED!!')
+    
+    def test_find_stop_index_max(self):
+        expected = 9
+
+        result = self.bb._findStopIndex(0, 10)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferFindStopIndexWrapped(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+        self.bb.append(b'READY')
+    
+    def test_find_stop_index_wrapped(self):
+        expected = 2
+
+        result = self.bb._findStopIndex(8, 5)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferFindStopIndexWrappedMaxReadable(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+        self.bb.append(b'READY')
+        self.bb.seek(3)
+    
+    def test_find_stop_index_wrapped_max_readable(self):
+        expected = 2
+
+        result = self.bb._findStopIndex(6, 7)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferFindStopIndexWrappedMax(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+        self.bb.append(b'READY')
+    
+    def test_find_stop_index_wrapped_max(self):
+        expected = 2
+
+        result = self.bb._findStopIndex(3, 10)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferFindStopIndexNegativeStart(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED!!')
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED!!')
+    
+    
+    def test_find_stop_index_negative_start(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._findStopIndex(-1, 5)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Starting index cannot be negative')
+
+class TestByteBufferFindStopIndexOversizedStart(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED!!')
+    
+    def test_find_stop_index_oversized_start(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._findStopIndex(10, 5)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Start index exceeds buffer length')
+
+class TestByteBufferFindStopIndexZeroLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED!!')
+    
+    def test_find_stop_index_zero_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._findStopIndex(0, 0)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Length cannot be zero')
+
+class TestByteBufferFindStopIndexNegativeLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED!!')
+    
+    def test_find_stop_index_negative_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._findStopIndex(0, -1)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Length cannot be negative')
+
+class TestByteBufferFindStopIndexOverBufferLenLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED!!')
+    
+    def test_find_stop_index_over_buffer_len_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._findStopIndex(0, 11)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Requested length is longer than the buffer length')
+
+class TestByteBufferFindStopIndexOverReadableLenLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_find_stop_index_over_readable_len_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._findStopIndex(0, 9)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Requested length is longer than what exists in the buffer')
+
+class TestByteBufferGetReadBounds(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_get_read_bounds(self):
+        expected = (0, 7)
+
+        result = self.bb._getReadBounds()
+
+        self.assertSequenceEqual(result, expected)
+
+class TestByteBufferGetReadBoundsMax(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED!!')
+    
+    def test_get_read_bounds_max(self):
+        expected = (0, 9)
+
+        result = self.bb._getReadBounds()
+
+        self.assertSequenceEqual(result, expected)
+
+class TestByteBufferGetReadBoundsWrapped(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+        self.bb.append(b'READY')
+    
+    def test_get_read_bounds_wrapped(self):
+        expected = (3, 2)
+
+        result = self.bb._getReadBounds()
+
+        self.assertSequenceEqual(result, expected)
+
+class TestByteBufferGetReadBoundsNoData(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+    
+    def test_get_read_bounds_no_data(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._getReadBounds()
+
+        self.assertEqual(cm.exception.args[0], 
+            'There is no readable data in the buffer')
+
+class TestByteBufferGetReadBoundsAllDataConsumed(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED!!')
+        self.bb.seek(10)
+    
+    def test_get_read_bounds_no_data(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._getReadBounds()
+
+        self.assertEqual(cm.exception.args[0], 
+            'There is no readable data in the buffer')
+
+class TestByteBufferIsWithinReadBounds(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_is_within_read_bounds(self):
+        expected = True
+
+        result = self.bb._isWithinReadBounds(0, 6)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferIsWithinReadBoundsMaxReadable(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_is_within_read_bounds_max_readable(self):
+        expected = True
+
+        result = self.bb._isWithinReadBounds(0, 8)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferIsWithinReadBoundsMax(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED!!')
+    
+    def test_is_within_read_bounds_max(self):
+        expected = True
+
+        result = self.bb._isWithinReadBounds(0, 10)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferIsWithinReadBoundsNonzeroStart(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_is_within_read_bounds_nonzero_start(self):
+        expected = True
+
+        result = self.bb._isWithinReadBounds(3, 4)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferIsWithinReadBoundsWrapped(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+        self.bb.append(b'READY')
+    
+    def test_is_within_read_bounds_wrapped(self):
+        expected = True
+
+        result = self.bb._isWithinReadBounds(3, 8)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferIsWithinReadBoundsWrappedMax(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+        self.bb.append(b'READY')
+    
+    def test_is_within_read_bounds_wrapped_max(self):
+        expected = True
+
+        result = self.bb._isWithinReadBounds(3, 10)
+
+        self.assertEqual(result, expected)
+
+class TestByteBufferIsWithinReadBoundsNegativeStart(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_is_within_read_bounds_negative_start(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._isWithinReadBounds(-1, 5)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Starting index cannot be negative')
+
+class TestByteBufferIsWithinReadBoundsOversizedStart(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_is_within_read_bounds_oversized_start(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._isWithinReadBounds(11, 5)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Start index exceeds buffer length')
+
+class TestByteBufferIsWithinReadBoundsZeroLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_is_within_read_bounds_zero_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._isWithinReadBounds(0, 0)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Length cannot be zero')
+
+class TestByteBufferIsWithinReadBoundsNegativeLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_is_within_read_bounds_negative_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._isWithinReadBounds(0, -1)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Length cannot be negative')
+
+class TestByteBufferIsWithinReadBoundsOverBufferLenLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED!!')
+    
+    def test_is_within_read_bounds_negative_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._isWithinReadBounds(0, 11)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Requested length is longer than the buffer length')
+
+class TestByteBufferIsWithinReadBoundsOverReadableLenLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'PREPARED')
+    
+    def test_is_within_read_bounds_over_readable_len(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._isWithinReadBounds(0, 10)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Requested length is longer than what exists in the buffer')
+
 class TestByteBufferFullRead(unittest.TestCase):
     bb = None
 
