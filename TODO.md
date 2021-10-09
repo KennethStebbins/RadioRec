@@ -1,3 +1,4 @@
+- [ ] Finish syncing mechanic in Redundant Radio Stream
 - [ ] Refactor ByteBuffer to use private variables properly and expose some as properties
     - Things that should be properties:
         - `byte_array` (ro)
@@ -8,4 +9,5 @@
 - [ ] Refactor ByteBuffer to have the proper prefix on private methods (one `_` instead of two `__`)
 - [ ] Write unit tests for new ByteBuffer functionality
 - [ ] Write unit tests for new RadioStream and RadioStream-related functionality
-- [ ] Write StreamRecorder that will write the data from a RadioStream or RedundantRadioStream to disk
+- [ ] Write PersistentByteBuffer that writes data on append
+- [ ] Modify RadioStream and RedundantRadioStream to allow you to give them byte buffers on init
