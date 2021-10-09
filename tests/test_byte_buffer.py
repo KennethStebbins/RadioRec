@@ -1,3 +1,4 @@
+from os import devnull
 from app.byte_buffer import ByteBuffer
 import unittest
 
@@ -1099,10 +1100,103 @@ class TestByteBufferSeekToEnd(unittest.TestCase):
         expected = b'YangAndNeo'
 
         self.bb.seekToEnd()
+        self.assertEqual(self.bb.readable_length, 0)
+
         self.bb.append(b'YangAndNeo')
         result = self.bb.read()
 
         self.assertSequenceEqual(result, expected)
+
+class TestByteBufferSeekToIndex(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(11)
+        self.bb.append(b'BakedAlaska')
+    
+    def test_seek_to_index(self):
+        expected = b'Alaska'
+
+        self.bb._seekToIndex(5)
+        self.assertEqual(self.bb.readable_length, 6)
+
+        result = self.bb.read()
+        self.assertSequenceEqual(result, expected)
+
+class TestByteBufferSeekToIndexWrapped(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(8)
+        self.bb.append(b'Baked')
+        self.bb.append(b'Alaska')
+    
+    def test_seek_to_index_wrapped(self):
+        expected = b'Alaska'
+
+        self.bb._seekToIndex(5)
+        self.assertEqual(self.bb.readable_length, 6)
+
+        result = self.bb.read()
+        self.assertSequenceEqual(result, expected)
+
+class TestByteBufferSeekToIndexNegativeIndex(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(11)
+        self.bb.append(b'BakedAlaska')
+    
+    def test_seek_to_index_negative_index(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._seekToIndex(-1)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Index cannot be zero')
+
+class TestByteBufferSeekToIndexOverBufferLenIndex(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(11)
+        self.bb.append(b'BakedAlaska')
+    
+    def test_seek_to_index_over_buffer_len_index(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._seekToIndex(11)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Index exceeds buffer length')
+
+class TestByteBufferSeekToIndexOutsideReadBoundsIndex(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(11)
+        self.bb.append(b'BakedAlaska')
+        self.bb.seek(5)
+    
+    def test_seek_to_index_over_buffer_len_index(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._seekToIndex(1)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Index is not within read bounds')
+
+class TestByteBufferSeekToIndexCurrentIndex(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(11)
+        self.bb.append(b'BakedAlaska')
+        self.bb.seek(5)
+    
+    def test_seek_to_index_current_index(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._seekToIndex(0)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Index is not within read bounds')
 
 class TestByteBufferSeekToSequence(unittest.TestCase):
     bb = None
