@@ -35,6 +35,50 @@ class TestByteBufferReadableLengthProperty(unittest.TestCase):
     def test_byte_array_property(self):
         self.assertEqual(self.bb.readable_length, self.bb._readable_length)
 
+class TestByteBufferSetReadableLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'SSBumbleby')
+    
+    def test_set_readable_length(self):
+        expected = b'Bumbleby'
+
+        self.bb._setReadableLength(8)
+        self.assertEqual(self.bb.readable_length, 8)
+
+        result = self.bb.read()
+        self.assertSequenceEqual(result, expected)
+
+class TestByteBufferSetReadableLengthNegativeLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'SSBumbleby')
+    
+    def test_set_readable_length_negative_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._setReadableLength(-1)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Length cannot be negative')
+
+class TestByteBufferSetReadableLengthOverBufferLenLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'SSBumbleby')
+    
+    def test_set_readable_length_over_buffer_len_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._setReadableLength(11)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Length is longer than buffer length')
+
 class TestByteBufferNormalAppend(unittest.TestCase):
     bb = None
 
