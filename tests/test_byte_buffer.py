@@ -808,12 +808,11 @@ class TestByteBufferZeroLengthReadFromEnd(unittest.TestCase):
         self.bb.append(b'LUZ_NOCEDA')
     
     def test_zero_length_read_from_end(self):
-        expected = b'NOCEDA'
+        with self.assertRaises(ValueError) as cm:
+            self.bb.readFromEnd(0)
 
-        result = self.bb.readFromEnd(6)
-
-        self.assertSequenceEqual(result, expected)
-        self.assertEqual(self.bb.readable_length, 0)
+        self.assertEqual(cm.exception.args[0], 
+            'Length cannot be zero')
 
 class TestByteBufferNegativeReadFromEnd(unittest.TestCase):
     bb = None
