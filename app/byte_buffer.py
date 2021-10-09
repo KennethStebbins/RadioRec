@@ -217,7 +217,10 @@ class ByteBuffer:
                 if newReadingIndex == self._length:
                     newReadingIndex = 0
                 log.debug(f"New reading index: {newReadingIndex}")
-                self._seekToIndex(newReadingIndex)
+                if newReadingIndex == self._index:
+                    self.seekToEnd()
+                else:
+                    self._seekToIndex(newReadingIndex)
 
             return response
         finally:
@@ -309,10 +312,7 @@ class ByteBuffer:
         log.debug("Acquiring write and consume locks")
         with self._write_lock, self._consume_lock:
             log.debug("Byte array lock acquired")
-            if index == self._index:
-                log.debug("Given index matches the current index")
-                self.seekToEnd()
-            elif not self._isWithinReadBounds(index, 1):
+            if not self._isWithinReadBounds(index, 1):
                 raise ValueError('Index is not within read bounds')
             elif index < self._index:
                 log.debug("Given index is less than the current index")
@@ -379,6 +379,9 @@ class ByteBuffer:
                     log.debug(f"Match found at index {matchingIndex}")
                     break
             
+            if matchingIndex < 0:
+                raise ValueError('Failed to find given byte sequence')
+                
             return matchingIndex
 
         finally:
@@ -398,9 +401,5 @@ class ByteBuffer:
 
     def seekPastSequence(self, seq : bytes):
         with self._write_lock, self._consume_lock:
-            index = self._findSequence(seq)
-            
-            if index >= 0:
-                self._seekToIndex(index + len(seq))
-            else:
-                raise ValueError('Sequence not found')
+            self.seekToSequence(seq)
+            self.seek(len(seq))
