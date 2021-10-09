@@ -2,7 +2,7 @@
 - [ ] Write PersistentByteBuffer that writes data on append
 - [ ] Modify RadioStream and RedundantRadioStream to allow you to give them byte buffers on init
 - [ ] Modify RadioStreamManager to select the stream with the largest buffer when failing over
-- [ ] Add locks back to helper methods in ByteBuffer
+- [x] Add locks back to helper methods in ByteBuffer
 - [x] Write unit tests for new ByteBuffer functionality
 - [x] Refactor ByteBuffer to use private variables properly and expose some as properties
     - Things that should be properties:
