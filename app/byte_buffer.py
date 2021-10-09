@@ -1,6 +1,6 @@
+from __future__ import annotations
 from threading import Event, RLock
 from typing import Tuple
-from __future__ import annotations
 import logging
 
 log = logging.getLogger('RadioRec')
