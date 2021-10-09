@@ -89,6 +89,15 @@ class ByteBuffer:
         return readi
     
     def _getReadIndexFromEnd(self, length_from_end : int) -> int:
+        if length_from_end == 0:
+            raise ValueError('Length cannot be zero')
+        elif length_from_end < 0:
+            raise ValueError('Length cannot be negative')
+        elif length_from_end > self._length:
+            raise ValueError('Requested length is longer than the buffer length')
+        elif length_from_end > self._readable_length:
+            raise ValueError('Requested length is longer than what exists in the buffer')
+        
         readi = self._index - length_from_end
         if readi < 0:
             readi += self._length
