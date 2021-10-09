@@ -51,9 +51,9 @@ class ByteBuffer:
 
             log.debug(f"Old readable length: {self._readable_length}")
             if b_len + self._readable_length > self._length:
-                self._readable_length = self._length
+                self._setReadableLength(self._length)
             else:
-                self._readable_length += b_len
+                self._setReadableLength(self._readable_length + b_len)
             log.debug(f"New readable length {self._readable_length}")
 
             if b_len - bi + self._index > self._length:
@@ -274,18 +274,6 @@ class ByteBuffer:
             self._write_lock.release()
             if consume:
                 self._consume_lock.release()
-    
-    def _setReadableLength(self, length : int) -> None:
-        if length < 0:
-            raise ValueError("Length cannot be negative")
-        elif length > self._length:
-            raise ValueError("Length is longer than buffer length")
-        
-        with self._write_lock, self._consume_lock:
-            if length > self._readable_length:
-                raise ValueError("Length is longer than current readable length")
-            
-            self._readable_length = length
 
     def seek(self, length : int) -> None:
         if length < 0:
