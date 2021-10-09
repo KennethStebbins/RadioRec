@@ -20,7 +20,7 @@ class TestByteBufferNormalAppend(unittest.TestCase):
 
         self.assertSequenceEqual(self.bb.byte_array[0:5], data)
         self.assertEqual(self.bb.readable_length, 5)
-        self.assertEqual(self.bb.index, 5)
+        self.assertEqual(self.bb._index, 5)
 
 class TestByteBufferAppendToFull(unittest.TestCase):
     bb = None
