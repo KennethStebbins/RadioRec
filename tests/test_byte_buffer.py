@@ -7,6 +7,34 @@ class TestByteBufferCreation(unittest.TestCase):
 
         self.assertIsInstance(bb, ByteBuffer)
 
+class TestByteBufferByteArrayProperty(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+    
+    def test_byte_array_property(self):
+        self.assertEqual(self.bb.byte_array, self.bb._byte_array)
+
+class TestByteBufferLengthProperty(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+    
+    def test_byte_array_property(self):
+        self.assertEqual(self.bb.length, self.bb._length)
+
+class TestByteBufferReadableLengthProperty(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'BLAKE')
+    
+    def test_byte_array_property(self):
+        self.assertEqual(self.bb.readable_length, self.bb._readable_length)
+
 class TestByteBufferNormalAppend(unittest.TestCase):
     bb = None
 
@@ -844,6 +872,21 @@ class TestByteBufferReadFromEnd(unittest.TestCase):
         self.assertSequenceEqual(result, expected)
         self.assertEqual(self.bb.readable_length, 0)
 
+class TestByteBufferReadFromEndNoConsume(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'LUZ_NOCEDA')
+    
+    def test_read_from_end_no_consume(self):
+        expected = b'NOCEDA'
+
+        result = self.bb.readFromEnd(6, consume=False)
+
+        self.assertSequenceEqual(result, expected)
+        self.assertEqual(self.bb.readable_length, 10)
+
 class TestByteBufferZeroLengthReadFromEnd(unittest.TestCase):
     bb = None
 
@@ -871,6 +914,78 @@ class TestByteBufferNegativeReadFromEnd(unittest.TestCase):
 
         self.assertEqual(cm.exception.args[0], 
             'Length cannot be negative')
+
+class TestByteBufferReadUpToRemainingLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'LUZ_NOCEDA')
+    
+    def test_read_up_to_remaining_length(self):
+        expected = b'LUZ_'
+
+        result = self.bb.readUpToRemainingLength(6)
+
+        self.assertSequenceEqual(result, expected)
+        self.assertEqual(self.bb.readable_length, 6)
+
+class TestByteBufferReadUpToRemainingLengthNoConsume(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'LUZ_NOCEDA')
+    
+    def test_read_up_to_remaining_length_no_consume(self):
+        expected = b'LUZ_'
+
+        result = self.bb.readUpToRemainingLength(6 ,consume=False)
+
+        self.assertSequenceEqual(result, expected)
+        self.assertEqual(self.bb.readable_length, 10)
+
+class TestByteBufferReadUpToRemainingLengthOverReadableLenLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'LUZ')
+    
+    def test_read_up_to_remaining_length_over_readable_len_length(self):
+        expected = b''
+
+        result = self.bb.readUpToRemainingLength(6)
+
+        self.assertSequenceEqual(result, expected)
+
+class TestByteBufferReadUpToRemainingLengthNegativeLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'LUZ_NOCEDA')
+    
+    def test_read_up_to_remaining_length_negative_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb.readUpToRemainingLength(-1)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Length cannot be negative')
+
+class TestByteBufferReadUpToRemainingLengthOverBufferLenLength(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'LUZ_NOCEDA')
+    
+    def test_read_up_to_remaining_length_over_buffer_len_length(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb.readUpToRemainingLength(11)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Requested length is longer than the buffer length')
 
 class TestByteBufferSeek(unittest.TestCase):
     bb = None
