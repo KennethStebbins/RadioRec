@@ -20,7 +20,7 @@ class ByteBuffer:
     
     @property
     def length(self):
-        return self.length
+        return self._length
     
     @property
     def readable_length(self):
@@ -256,13 +256,16 @@ class ByteBuffer:
     def readUpToRemainingLength(self, length : int, consume : bool = True) -> bytearray:
         if length < 0:
             raise ValueError("Length cannot be negative")
-        elif self._readable_length < length:
-            return bytearray(0)
-        
+        elif length > self._length:
+            raise ValueError("Requested length is longer than the buffer length")
+
         try:
             self._write_lock.acquire()
             if consume:
                 self._consume_lock.acquire()
+            
+            if self._readable_length < length:
+                return bytearray(0)
 
             readLength = self._readable_length - length
 
