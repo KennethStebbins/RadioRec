@@ -264,7 +264,7 @@ class ByteBuffer:
             if consume:
                 self._consume_lock.acquire()
             
-            if self._readable_length < length:
+            if length > self._readable_length:
                 return bytearray(0)
 
             readLength = self._readable_length - length
