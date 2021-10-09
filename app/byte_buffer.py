@@ -364,6 +364,13 @@ class ByteBuffer:
                         matchLen = seq_len
                     log.debug(f"Current desired match length: {matchLen}")
 
+                    if not self._isWithinReadBounds(i, matchLen):
+                        # If the remaining untested data in the buffer is shorter
+                        # than the given sequence, the given sequence cannot
+                        # exist
+                        isMatch = False
+                        break
+
                     readBytes = self._read(i, matchLen, consume=False)
                     isMatch = seq[:matchLen] == readBytes
 
@@ -381,7 +388,7 @@ class ByteBuffer:
             
             if matchingIndex < 0:
                 raise ValueError('Failed to find given byte sequence')
-                
+
             return matchingIndex
 
         finally:
