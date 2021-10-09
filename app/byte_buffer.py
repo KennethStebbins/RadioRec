@@ -399,12 +399,7 @@ class ByteBuffer:
 
     def seekToSequence(self, seq : bytes):
         with self._write_lock, self._consume_lock:
-            index = self._findSequence(seq)
-            
-            if index >= 0:
-                self._seekToIndex(index)
-            else:
-                raise ValueError('Sequence not found')
+            self._seekToIndex(self._findSequence(seq))
 
     def seekPastSequence(self, seq : bytes):
         with self._write_lock, self._consume_lock:
