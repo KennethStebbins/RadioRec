@@ -1198,6 +1198,115 @@ class TestByteBufferSeekToIndexCurrentIndex(unittest.TestCase):
         self.assertEqual(cm.exception.args[0], 
             'Index is not within read bounds')
 
+class TestByteBufferFindSequence(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(52)
+        self.bb.append(b'Great, the gang\'s all here! Now we can die together!')
+    
+    def test_find_sequence(self):
+        expected = 28
+
+        result = self.bb._findSequence(b'Now')
+        self.assertEqual(result, expected)
+
+class TestByteBufferFindSequenceWraparound(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(30)
+        self.bb.append(b'Great, the gang\'s all here!')
+        self.bb.append(b'Now we can die together!')
+    
+    def test_find_sequence_wraparound(self):
+        expected = 12
+
+        result = self.bb._findSequence(b'together')
+        self.assertEqual(result, expected)
+
+class TestByteBufferFindSequenceExactBufferLengthSeq(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(9)
+        self.bb.append(b'Ruby Rose')
+    
+    def test_find_sequence_exact_buffer_length_seq(self):
+        expected = 0
+
+        result = self.bb._findSequence(b'Ruby Rose')
+        self.assertEqual(result, expected)
+
+class TestByteBufferFindSequenceExactReadableLengthSeq(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'Ruby Rose')
+    
+    def test_find_sequence_exact_readable_length_seq(self):
+        expected = 0
+
+        result = self.bb._findSequence(b'Ruby Rose')
+        self.assertEqual(result, expected)
+
+class TestByteBufferOversizedFindSequence(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(4)
+        self.bb.append(b'RUBY')
+    
+    def test_oversized_find_sequence(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._findSequence(b'RUBYROSE')
+
+        self.assertEqual(cm.exception.args[0], 
+            'Sequence cannot be longer than buffer length')
+
+class TestByteBufferOverReadLengthFindSequence(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'RUBY')
+    
+    def test_over_read_length_find_sequence(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._findSequence(b'RUBYROSE')
+
+        self.assertEqual(cm.exception.args[0], 
+            'Sequence is longer than readable length')
+
+class TestByteBufferFindEmptySequence(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'RUBY')
+    
+    def test_find_empty_sequence(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._findSequence(b'')
+
+        self.assertEqual(cm.exception.args[0], 
+            'Sequence cannot be empty')
+
+class TestByteBufferFindNonexistentSequence(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+        self.bb.append(b'RUBY')
+    
+    def test_find_nonexistent_sequence(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb._findSequence(b'ROSE')
+
+        self.assertEqual(cm.exception.args[0], 
+            'Failed to find given byte sequence')
+
 class TestByteBufferSeekToSequence(unittest.TestCase):
     bb = None
 
@@ -1210,66 +1319,55 @@ class TestByteBufferSeekToSequence(unittest.TestCase):
 
         self.bb.seekToSequence(b'Now')
         result = self.bb.read()
+
         self.assertSequenceEqual(result, expected)
 
 class TestByteBufferSeekToSequenceWraparound(unittest.TestCase):
     bb = None
 
     def setUp(self) -> None:
-        self.bb = ByteBuffer(40)
+        self.bb = ByteBuffer(30)
         self.bb.append(b'Great, the gang\'s all here!')
         self.bb.append(b'Now we can die together!')
     
-    def test_seek_to_sequence(self):
+    def test_seek_to_sequence_wraparound(self):
         expected = b'Now we can die together!'
 
         self.bb.seekToSequence(b'Now')
         result = self.bb.read()
 
-        self.assertSequenceEqual(self.bb.byte_array, b'e together!gang\'s all here!Now we can di')
         self.assertSequenceEqual(result, expected)
 
-class TestByteBufferOversizedSeekToSequence(unittest.TestCase):
+class TestByteBufferSeekPastSequence(unittest.TestCase):
     bb = None
 
     def setUp(self) -> None:
-        self.bb = ByteBuffer(4)
-        self.bb.append(b'RUBY')
+        self.bb = ByteBuffer(52)
+        self.bb.append(b'Great, the gang\'s all here! Now we can die together!')
     
-    def test_oversized_seek_to_sequence(self):
-        with self.assertRaises(ValueError) as cm:
-            self.bb.seekToSequence(b'RUBYROSE')
+    def test_seek_past_sequence(self):
+        expected = b'Now we can die together!'
 
-        self.assertEqual(cm.exception.args[0], 
-            'Sequence cannot be longer than buffer length')
+        self.bb.seekPastSequence(b'here! ')
+        result = self.bb.read()
 
-class TestByteBufferOverReadLengthSeekToSequence(unittest.TestCase):
+        self.assertSequenceEqual(result, expected)
+
+class TestByteBufferSeekPastSequenceWraparound(unittest.TestCase):
     bb = None
 
     def setUp(self) -> None:
-        self.bb = ByteBuffer(10)
-        self.bb.append(b'RUBY')
+        self.bb = ByteBuffer(30)
+        self.bb.append(b'Great, the gang\'s all here! ')
+        self.bb.append(b'Now we can die together!')
     
-    def test_over_read_length_seek_to_sequence(self):
-        with self.assertRaises(ValueError) as cm:
-            self.bb.seekToSequence(b'RUBYROSE')
+    def test_seek_past_sequence_wraparound(self):
+        expected = b'Now we can die together!'
 
-        self.assertEqual(cm.exception.args[0], 
-            'Sequence is longer than readable length')
+        self.bb.seekPastSequence(b'here! ')
+        result = self.bb.read()
 
-class TestByteBufferSeekToEmptySequence(unittest.TestCase):
-    bb = None
-
-    def setUp(self) -> None:
-        self.bb = ByteBuffer(10)
-        self.bb.append(b'RUBY')
-    
-    def test_seek_to_empty_sequence(self):
-        with self.assertRaises(ValueError) as cm:
-            self.bb.seekToSequence(b'')
-
-        self.assertEqual(cm.exception.args[0], 
-            'Sequence cannot be empty')
+        self.assertSequenceEqual(result, expected)
 
 if __name__ == '__main__':
     unittest.main()
