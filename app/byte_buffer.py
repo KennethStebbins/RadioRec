@@ -275,7 +275,7 @@ class ByteBuffer:
             if consume:
                 self._consume_lock.release()
     
-    def _seekTo(self, length : int) -> None:
+    def _setReadableLength(self, length : int) -> None:
         if length < 0:
             raise ValueError("Length cannot be negative")
         elif length > self._length:
@@ -297,10 +297,10 @@ class ByteBuffer:
             if length > self._readable_length:
                 raise ValueError("Cannot seek past the data stored in the buffer")
 
-            self._seekTo(self._readable_length - length)
+            self._setReadableLength(self._readable_length - length)
 
     def seekToEnd(self) -> None:
-        self._seekTo(0)
+        self._setReadableLength(0)
 
     def _seekToIndex(self, index : int) -> None:
         log.debug(f"ByteArray._seekToIndex() called. index: {index}")
@@ -319,10 +319,10 @@ class ByteBuffer:
                 raise ValueError('Index is not within read bounds')
             elif index < self._index:
                 log.debug("Given index is less than the current index")
-                self._seekTo(self._index - index)
+                self._setReadableLength(self._index - index)
             else:
                 log.debug("Given index is greater than the current index")
-                self._seekTo(self._length - index + self._index)
+                self._setReadableLength(self._length - index + self._index)
         log.debug("Write and consume locks released")
     
     def _findSequence(self, seq : bytes, match_len_step : int = 1000):
