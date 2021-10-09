@@ -10,7 +10,6 @@ class ByteBuffer:
     _byte_array_lock : RLock = None
     _length : int = 0
     _index : int = 0
-    _read_index : int = 0
     _readable_length : int = 0
 
     @property
