@@ -87,6 +87,7 @@ class RadioStreamManager(Thread):
         if redundancy < 1:
             raise ValueError('Cannot have a redundancy less than 1')
 
+        self._redundant_radio_streams = []
         self._radio_stream_lock = RLock()
         self._desired_redundancy = redundancy
         self._desired_buffer_size = buffer_size
