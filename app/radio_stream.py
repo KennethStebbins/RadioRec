@@ -4,7 +4,7 @@ from requests import request
 from selenium.common.exceptions import TimeoutException
 from urllib3.response import HTTPResponse
 from threading import Event, RLock, Thread
-from typing import Callable, List
+from typing import Callable, Iterable, List
 
 from app.get_stream_url import get_stream_url
 from app.byte_buffer import ByteBuffer
@@ -15,6 +15,7 @@ class RadioStream(Thread):
     _byte_buffer : ByteBuffer = None
     _url : str = None
     _preroll_len : int = 63500
+    _http_stream : HTTPResponse = None
     
     @property
     def byte_buffer(self):
@@ -24,10 +25,20 @@ class RadioStream(Thread):
     def url(self):
         return self._url
 
-    def __init__(self, buffer_size : int = 307200, attempts : int = 3, preroll_len : int = 63500,
+    def __init__(self, buffer_size : int = 307200, attempts : int = 3, 
+            preroll_len : int = 63500, url = None,
             *args, **kwargs) -> None:
         self._byte_buffer = ByteBuffer(buffer_size)
         self._preroll_len = preroll_len
+
+        if url is None:
+            self._getURL(attempts=attempts)
+        else:
+            self._url = url
+
+        super().__init__(*args, **kwargs)
+
+    def _getURL(self, attempts : int = 3):
         for i in range(0, attempts):
             try:
                 self._url = get_stream_url()
@@ -40,18 +51,20 @@ class RadioStream(Thread):
                     log.error(f"Ran out of attempts to get stream url")
                     raise
 
-        super().__init__(*args, **kwargs)
-
     def run(self):
         with request('GET', self._url, stream=True) as r:
-            raw : HTTPResponse = r.raw
+            self._http_stream : HTTPResponse = r.raw
 
             # Dump preroll data
             with open(devnull, 'wb') as f:
-                f.write(raw.read(self._preroll_len))
+                f.write(self._http_stream.read(self._preroll_len))
 
-            while raw.readable():
-                self._byte_buffer.append(raw.read(8192))
+            while self._http_stream.readable():
+                self._byte_buffer.append(self._http_stream.read(8192))
+    
+    def __del__(self):
+        if self._http_stream is not None and not self._http_stream.isclosed():
+            self._http_stream.close()
 
 class RadioStreamManager(Thread):
     _primary_radio_stream : RadioStream = None
@@ -66,7 +79,7 @@ class RadioStreamManager(Thread):
 
     def __init__(self, redundancy : int = 2, buffer_size : int = 307200, 
             start_attempts : int = 3, sync_seq_length : int = 10000,
-            on_stream_failover : Callable[[RadioStream, RadioStream], None] = None, 
+            on_stream_failover : Callable[[RadioStream, RadioStream], None] = None,
             *args, **kwargs) -> None:
         if redundancy < 1:
             raise ValueError('Cannot have a redundancy less than 1')
@@ -132,7 +145,8 @@ class RadioStreamManager(Thread):
     def run(self):
         event = Event()
         while True:
-            if not self._primary_radio_stream.is_alive:
+            prs = self._primary_radio_stream
+            if prs is None or not prs.is_alive:
                 self._replace_primary_stream()
             self._restore_redundancy()
             event.wait(.250)
