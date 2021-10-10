@@ -38,20 +38,20 @@ class RadioStream(Thread):
 
         super().__init__(*args, **kwargs)
 
-    def _getURL(self, attempts : int = 3):
+    def _getURL(self, attempts : int = 3) -> None:
         for i in range(0, attempts):
             try:
                 self._url = get_stream_url()
                 if self._url is not None:
                     break
             except TimeoutException:
-                if i < attempts - 1:
-                    log.debug(f"Failed to get stream URL: Attempt #{i + 1}")
-                else:
-                    log.error(f"Ran out of attempts to get stream url")
-                    raise
+                log.debug(f"Failed to get stream URL: Attempt #{i + 1}")
 
-    def run(self):
+        if self._url is None:
+            log.warning(f"Ran out of attempts to get stream url")
+            raise RuntimeError("Failed to get a stream URL")
+
+    def run(self) -> None:
         with request('GET', self._url, stream=True) as r:
             self._http_stream : HTTPResponse = r.raw
 
@@ -62,6 +62,10 @@ class RadioStream(Thread):
             while self._http_stream.readable():
                 self._byte_buffer.append(self._http_stream.read(8192))
     
+    def stop(self) -> None:
+        if not self._http_stream.closed:
+            self._http_stream.close()
+
     def __del__(self):
         if self._http_stream is not None and not self._http_stream.isclosed():
             self._http_stream.close()
@@ -74,7 +78,7 @@ class RadioStreamManager(Thread):
     _desired_buffer_size : int = 307200
     _stream_start_attempts : int = 3
     _sync_seq_length : int = 10000
-    _on_stream_failover_handlers : \
+    _stream_failover_handlers : \
         List[Callable[[RadioStream, RadioStream], None]] = []
 
     def __init__(self, redundancy : int = 2, buffer_size : int = 307200, 
@@ -95,7 +99,7 @@ class RadioStreamManager(Thread):
         self._sync_seq_length = sync_seq_length
         
         if on_stream_failover is not None:
-            self.add_on_stream_failover_handler(on_stream_failover)
+            self.add_stream_failover_handler(on_stream_failover)
     
     def _start_new_stream(self) -> RadioStream:
         result = None
@@ -108,8 +112,7 @@ class RadioStreamManager(Thread):
         return result
 
     def _restore_redundancy(self):
-        self._radio_stream_lock.acquire()
-        try:
+        with self._radio_stream_lock:
             # Prune dead streams
             for stream in self._redundant_radio_streams:
                 if not stream.is_alive():
@@ -121,14 +124,11 @@ class RadioStreamManager(Thread):
             for i in range(0, new_streams_needed):
                 self._redundant_radio_streams.append(self._start_new_stream())
 
-        finally:
-            self._radio_stream_lock.release()
-
     def _replace_primary_stream(self):
         with self._radio_stream_lock:
             failover_stream : RadioStream = None
             for stream in self._redundant_radio_streams:
-                if stream.is_alive:
+                if stream.is_alive():
                     failover_stream = stream
                     break
             
@@ -137,7 +137,7 @@ class RadioStreamManager(Thread):
                 # make a new stream
                 failover_stream = self._start_new_stream()
             
-            for handler in self._on_stream_failover_handlers:
+            for handler in self._stream_failover_handlers:
                 handler(self._primary_radio_stream, failover_stream)
             
             self._primary_radio_stream = failover_stream
@@ -157,13 +157,13 @@ class RadioStreamManager(Thread):
             return self._primary_radio_stream
   
     # First param of callable is old stream, second is new
-    def add_on_stream_failover_handler(self, handler : Callable[[RadioStream, RadioStream], None]):
-        if callable(handler) and handler not in self._on_stream_failover_handlers:
-            self._on_stream_failover_handlers.append(handler)
+    def add_stream_failover_handler(self, handler : Callable[[RadioStream, RadioStream], None]):
+        if callable(handler) and handler not in self._stream_failover_handlers:
+            self._stream_failover_handlers.append(handler)
     
-    def remove_on_stream_failover_handler(self, handler: Callable[[RadioStream, RadioStream], None]):
-        if handler in self._on_stream_failover_handlers:
-            self._on_stream_failover_handlers.remove(handler)
+    def remove_stream_failover_handler(self, handler: Callable[[RadioStream, RadioStream], None]):
+        if handler in self._stream_failover_handlers:
+            self._stream_failover_handlers.remove(handler)
 
 class RedundantRadioStream(Thread):
     _byte_buffer : ByteBuffer = None
