@@ -114,7 +114,7 @@ class RadioStreamManager(Thread):
                     self._redundant_radio_streams.remove(stream)
             
             # Start up new streams
-            new_streams_needed = self._desired_redundancy - 1 - \
+            new_streams_needed = self._desired_redundancy - \
                                     len(self._redundant_radio_streams)
             for i in range(0, new_streams_needed):
                 self._redundant_radio_streams.append(self._start_new_stream())
