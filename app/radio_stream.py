@@ -36,7 +36,7 @@ class RadioStream(Thread):
         else:
             self._url = url
 
-        super().__init__(*args, **kwargs)
+        super().__init__(daemon=True, *args, **kwargs)
 
     def _getURL(self, attempts : int = 3) -> None:
         for i in range(0, attempts):
@@ -77,29 +77,26 @@ class RadioStreamManager(Thread):
     _desired_redundancy : int = 2
     _desired_buffer_size : int = 307200
     _stream_start_attempts : int = 3
-    _sync_seq_length : int = 10000
     _stream_failover_handlers : \
-        List[Callable[[RadioStream, RadioStream], None]] = []
+        List[Callable[[RadioStream, RadioStream], None]] = None
 
     def __init__(self, redundancy : int = 2, buffer_size : int = 307200, 
-            start_attempts : int = 3, sync_seq_length : int = 10000,
+            start_attempts : int = 3,
             on_stream_failover : Callable[[RadioStream, RadioStream], None] = None,
             *args, **kwargs) -> None:
         if redundancy < 1:
             raise ValueError('Cannot have a redundancy less than 1')
-        
-        if sync_seq_length * 2 > buffer_size:
-            raise ValueError("Not enough room to sync with given sync " + 
-                "sequence length within the given buffer size.")
 
         self._radio_stream_lock = RLock()
         self._desired_redundancy = redundancy
         self._desired_buffer_size = buffer_size
         self._stream_start_attempts = start_attempts
-        self._sync_seq_length = sync_seq_length
+        self._stream_failover_handlers = []
         
         if on_stream_failover is not None:
             self.add_stream_failover_handler(on_stream_failover)
+        
+        super().__init__(daemon=True, *args, **kwargs)
     
     def _start_new_stream(self) -> RadioStream:
         result = None
