@@ -7,6 +7,14 @@ class TestByteBufferCreation(unittest.TestCase):
         bb = ByteBuffer()
 
         self.assertIsInstance(bb, ByteBuffer)
+    
+    def test_custom_len(self):
+        expected = 10
+
+        bb = ByteBuffer(length=10)
+
+        self.assertIsInstance(bb, ByteBuffer)
+        self.assertEqual(bb.length, expected)
 
 class TestByteBufferByteArrayProperty(unittest.TestCase):
     bb = None
