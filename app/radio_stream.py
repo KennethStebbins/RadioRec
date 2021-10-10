@@ -102,6 +102,7 @@ class RadioStreamManager(Thread):
         while result is None:
             try:
                 result = RadioStream(self._desired_buffer_size, self._stream_start_attempts)
+                result.start()
             except TimeoutException:
                 log.debug("RadioStream failed to start due to TimeoutException. Will try again.")
         return result
@@ -132,8 +133,10 @@ class RadioStreamManager(Thread):
                 # make a new stream
                 failover_stream = self._start_new_stream()
             
-            for handler in self._stream_failover_handlers:
-                handler(self._primary_radio_stream, failover_stream)
+            # Don't call handlers unless we're actually failing over
+            if self._primary_radio_stream is not None:
+                for handler in self._stream_failover_handlers:
+                    handler(self._primary_radio_stream, failover_stream)
             
             self._primary_radio_stream = failover_stream
 
