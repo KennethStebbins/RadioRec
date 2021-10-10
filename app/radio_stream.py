@@ -26,8 +26,7 @@ class RadioStream(Thread):
         return self._url
 
     def __init__(self, buffer_size : int = 307200, attempts : int = 3, 
-            preroll_len : int = 63500, url = None,
-            *args, **kwargs) -> None:
+            preroll_len : int = 63500, url = None) -> None:
         self._byte_buffer = ByteBuffer(buffer_size)
         self._preroll_len = preroll_len
 
@@ -36,7 +35,7 @@ class RadioStream(Thread):
         else:
             self._url = url
 
-        super().__init__(daemon=True, *args, **kwargs)
+        super().__init__(daemon=True)
 
     def _getURL(self, attempts : int = 3) -> None:
         for i in range(0, attempts):
@@ -82,8 +81,7 @@ class RadioStreamManager(Thread):
 
     def __init__(self, redundancy : int = 2, buffer_size : int = 307200, 
             start_attempts : int = 3,
-            on_stream_failover : Callable[[RadioStream, RadioStream], None] = None,
-            *args, **kwargs) -> None:
+            on_stream_failover : Callable[[RadioStream, RadioStream], None] = None) -> None:
         if redundancy < 1:
             raise ValueError('Cannot have a redundancy less than 1')
 
@@ -97,14 +95,13 @@ class RadioStreamManager(Thread):
         if on_stream_failover is not None:
             self.add_stream_failover_handler(on_stream_failover)
         
-        super().__init__(daemon=True, *args, **kwargs)
+        super().__init__(daemon=True)
     
     def _start_new_stream(self) -> RadioStream:
         result = None
         while result is None:
             try:
-                result = RadioStream(self._desired_buffer_size, self._stream_start_attempts,
-                                    daemon=True)
+                result = RadioStream(self._desired_buffer_size, self._stream_start_attempts)
             except TimeoutException:
                 log.debug("RadioStream failed to start due to TimeoutException. Will try again.")
         return result
@@ -173,7 +170,7 @@ class RedundantRadioStream(Thread):
 
     def __init__(self, redundancy : int = 2, buffer_size : int = 307200, 
             start_attempts : int = 3, sync_len : int = 10000, sync_attempts : int = 5,
-            desired_stream_cache_len : int = 200000, *args, **kwargs) -> None:
+            desired_stream_cache_len : int = 200000) -> None:
         self._byte_buffer = ByteBuffer(buffer_size)
         self._write_lock = RLock()
         self._sync_len = sync_len
@@ -183,7 +180,7 @@ class RedundantRadioStream(Thread):
         self._radio_stream_manager = RadioStreamManager(redundancy, buffer_size, 
                                         start_attempts, daemon=True)
 
-        super().__init__(self, *args, **kwargs)
+        super().__init__(daemon=True)
 
     @property
     def byte_buffer(self):
