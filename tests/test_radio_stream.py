@@ -52,8 +52,9 @@ class TestRadioStreamProperties(TestCase):
 class TestRadioStreamStartAndStop(TestCase):
     _rs : RadioStream = None
 
-    def setUp(self) -> None:
-        self._rs = RadioStream()
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.rs = RadioStream()
 
     def test_0_start(self):
         e = Event()
@@ -93,6 +94,13 @@ class TestRadioStreamManagerCreation(TestCase):
         self.assertIsInstance(rsm, RadioStreamManager)
         self.assertEqual(rsm._desired_redundancy, expected)
 
+    def test_zero_redundancy(self):
+        with self.assertRaises(ValueError) as cm:
+            RadioStreamManager(redundancy=0)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Cannot have a redundancy less than 1')
+
     def test_buffer_size(self):
         expected = 1000
 
@@ -109,14 +117,6 @@ class TestRadioStreamManagerCreation(TestCase):
         self.assertIsInstance(rsm, RadioStreamManager)
         self.assertEqual(rsm._stream_start_attempts, expected)
 
-    def test_sync_seq_length(self):
-        expected = 2000
-
-        rsm = RadioStreamManager(sync_seq_length=expected)
-
-        self.assertIsInstance(rsm, RadioStreamManager)
-        self.assertEqual(rsm._sync_seq_length, expected)
-
     def test_on_stream_failover(self):
         def handle_failover(old : RadioStream, new : RadioStream) -> None:
             self.fail("This handler should not have been called")
@@ -124,53 +124,66 @@ class TestRadioStreamManagerCreation(TestCase):
         rsm = RadioStreamManager(on_stream_failover=handle_failover)
 
         self.assertIn(handle_failover, rsm._stream_failover_handlers)
+    
+    def test_on_stream_failover_followup(self):
+        expected = 0
+
+        rsm = RadioStreamManager()
+
+        self.assertEqual(len(rsm._stream_failover_handlers), expected)
 
 class TestRadioStreamManagerFailoverHandlers(TestCase):
     _rsm : RadioStreamManager = None
 
-    def setUp(self) -> None:
-        self._rsm = RadioStreamManager()
-    
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._rsm = RadioStreamManager()
+
     def _handle_failover(self, old : RadioStream, new : RadioStream) -> None:
         self.fail("This handler should not have been called")
 
     def test_0_add_handler(self):
-        self._rsm.add_stream_failover_handler(self._handle_failover)
+        rsm = self._rsm
 
-        self.assertIn(self._handle_failover, self._rsm._stream_failover_handlers)
+        rsm.add_stream_failover_handler(self._handle_failover)
+
+        self.assertIn(self._handle_failover, rsm._stream_failover_handlers)
+        self.assertEqual(len(rsm._stream_failover_handlers), 1)
 
     def test_1_remove_handler(self):
-        self.assertIn(self._handle_failover, self._rsm._stream_failover_handlers)
+        rsm = self._rsm
 
-        self._rsm.remove_stream_failover_handler(self._handle_failover)
+        rsm.remove_stream_failover_handler(self._handle_failover)
 
-        self.assertEqual(len(self._rsm._stream_failover_handlers), 0)
+        self.assertEqual(len(rsm._stream_failover_handlers), 0)
 
 class TestRadioStreamManagerStartAndFailover(TestCase):
     _rsm : RadioStreamManager = None
     _redundancy : int = 2
 
-    def setUp(self) -> None:
-        self._rsm = RadioStreamManager(redundancy=self._redundancy)
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._rsm = RadioStreamManager(redundancy=cls._redundancy)
 
     def test_0_start(self):
         rsm = self._rsm
         e = Event()
 
-        self._rsm.start()
+        rsm.start()
 
-        e.wait(35)
+        e.wait(90)
 
         self.assertIsInstance(rsm._primary_radio_stream, RadioStream)
         self.assertEqual(len(rsm._redundant_radio_streams), self._redundancy)
         for stream in rsm._redundant_radio_streams:
             self.assertIsInstance(stream, RadioStream)
 
-    def test_1_prs_property(self):
-        self.assertIsNotNone(self._rsm._primary_radio_stream)
-        self.assertEqual(self._rsm.primary_radio_stream, self._rsm._primary_radio_stream)    
+    def test_1_prs_property(self) -> None:
+        rsm = self._rsm
+
+        self.assertEqual(rsm.primary_radio_stream, rsm._primary_radio_stream)    
     
-    def test_2_restore_redundancy(self):
+    def test_2_restore_redundancy(self) -> None:
         rsm = self._rsm
         e = Event()
 
@@ -183,15 +196,14 @@ class TestRadioStreamManagerStartAndFailover(TestCase):
         for stream in rsm._redundant_radio_streams:
             self.assertNotEqual(stream, oldStream)
 
-    def test_3_failover_from_redundants(self):
+    def test_3_primary_stream_failover(self) -> None:
         rsm = self._rsm
         e = Event()
-
         oldPRS : RadioStream = rsm.primary_radio_stream
 
         def handle_failover(old : RadioStream, new : RadioStream) -> None:
             self.assertEqual(old, oldPRS)
-            self.assertFalse(old.is_alive)
+            self.assertFalse(old.is_alive())
             self.assertIsInstance(new, RadioStream)
             self.assertNotEqual(old, new)
 
@@ -206,24 +218,18 @@ class TestRadioStreamManagerStartAndFailover(TestCase):
 
         self.assertTrue(e.is_set())
 
-    def test_4_failover_all_dead(self):
+    def test_4_complete_failure(self) -> None:
         rsm = self._rsm
         e = Event()
 
-        def handle_failover(old : RadioStream, new : RadioStream) -> None:
-            e.set()
-
-        rsm.add_stream_failover_handler(handle_failover)
-
         with rsm._radio_stream_lock:
-            oldStreams = rsm._redundant_radio_streams
+            oldStreams = list(rsm._redundant_radio_streams)
             oldStreams += [rsm.primary_radio_stream]
 
             for stream in oldStreams:
                 stream.stop()
             
-        e.wait(180)
-        rsm.remove_stream_failover_handler(handle_failover)
+        e.wait(90)
 
         self.assertIsNotNone(rsm.primary_radio_stream)
         self.assertEqual(len(rsm._redundant_radio_streams), self._redundancy)
