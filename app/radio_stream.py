@@ -126,6 +126,7 @@ class RadioStreamManager(Thread):
             for stream in self._redundant_radio_streams:
                 if stream.is_alive():
                     failover_stream = stream
+                    self._redundant_radio_streams.remove(stream)
                     break
             
             if failover_stream is None:
