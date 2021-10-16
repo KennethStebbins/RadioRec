@@ -58,7 +58,7 @@ class RadioStream(Thread):
             with open(devnull, 'wb') as f:
                 f.write(self._http_stream.read(self._preroll_len))
 
-            while self._http_stream.readable():
+            while not self._http_stream.isclosed() and self._http_stream.readable():
                 self._byte_buffer.append(self._http_stream.read(8192))
     
     def stop(self) -> None:
