@@ -144,7 +144,7 @@ class RadioStreamManager(Thread):
         event = Event()
         while True:
             prs = self._primary_radio_stream
-            if prs is None or not prs.is_alive:
+            if prs is None or not prs.is_alive():
                 self._replace_primary_stream()
             self._restore_redundancy()
             event.wait(.250)
