@@ -169,15 +169,17 @@ class RedundantRadioStream(Thread):
     _write_lock : RLock = None
     _radio_stream_manager : RadioStreamManager = None
     _sync_len : int = 10000
+    _should_run : bool = True
 
     def __init__(self, redundancy : int = 2, buffer_size : int = 307200, 
             start_attempts : int = 3, sync_len : int = 10000) -> None:
         self._byte_buffer = ByteBuffer(buffer_size)
         self._write_lock = RLock()
         self._sync_len = sync_len
+        self._should_run = True
 
         self._radio_stream_manager = RadioStreamManager(redundancy, buffer_size, 
-                                        start_attempts, daemon=True)
+                                        start_attempts)
         self._radio_stream_manager.add_stream_failover_handler(
             self.handleFailover)
 
@@ -189,16 +191,21 @@ class RedundantRadioStream(Thread):
     
     def run(self):
         if not self._radio_stream_manager.is_alive():
-            self._radio_stream_manager.run()
+            self._radio_stream_manager.start()
 
         # TODO: Read a bit, write it to the main buffer
         event = Event()
 
-        prs = self._radio_stream_manager.primary_radio_stream
-        with self._write_lock:
-            self.byte_buffer.append(prs.byte_buffer.readUpToRemainingLength(
-                self._sync_len))
-        event.wait(.250)
+        while self._should_run:
+            prs = self._radio_stream_manager.primary_radio_stream
+            if prs is None:
+                event.wait(.250)
+                continue
+
+            with self._write_lock:
+                self.byte_buffer.append(prs.byte_buffer.readUpToRemainingLength(
+                    self._sync_len))
+            event.wait(.250)
 
     def handleFailover(self, old_primary : RadioStream, new_primary : RadioStream) -> None:
         try:
@@ -228,3 +235,5 @@ class RedundantRadioStream(Thread):
             log.debug("Releasing write lock")
             self._write_lock.release()
 
+    def stop(self) -> None:
+        self._should_run = False
