@@ -1,6 +1,6 @@
-from os import devnull
-from app.byte_buffer import ByteBuffer
-import unittest
+from app.byte_buffer import ByteBuffer, PersistentByteBuffer
+from pathlib import Path
+import os, unittest
 
 class TestByteBufferCreation(unittest.TestCase):
     def test_creation(self):
@@ -175,6 +175,19 @@ class TestByteBufferOversizedOverflowAppend(unittest.TestCase):
         self.bb.append(data)
 
         self.assertSequenceEqual(self.bb.byte_array, expected)
+
+class TestByteBufferAppendNonBytesData(unittest.TestCase):
+    bb = None
+
+    def setUp(self) -> None:
+        self.bb = ByteBuffer(10)
+    
+    def test_find_stop_index_negative_start(self):
+        with self.assertRaises(ValueError) as cm:
+            self.bb.append('hahaha')
+
+        self.assertEqual(cm.exception.args[0], 
+            'Value given for \"bytes\" is not a bytes-like object.')
 
 class TestByteBufferGetFirstReadIndex(unittest.TestCase):
     bb = None
@@ -411,11 +424,7 @@ class TestByteBufferFindStopIndexNegativeStart(unittest.TestCase):
 
     def setUp(self) -> None:
         self.bb = ByteBuffer(10)
-        self.bb.append(b'PREPARED!!')
-    def setUp(self) -> None:
-        self.bb = ByteBuffer(10)
-        self.bb.append(b'PREPARED!!')
-    
+        self.bb.append(b'PREPARED!!')    
     
     def test_find_stop_index_negative_start(self):
         with self.assertRaises(ValueError) as cm:
@@ -1377,5 +1386,90 @@ class TestByteBufferSeekPastSequenceWraparound(unittest.TestCase):
 
         self.assertSequenceEqual(result, expected)
 
+class TestPersistentByteBufferCreation(unittest.TestCase):
+
+    def test_init(self) -> None:
+        testFilePath : str = './tests/output/pbb_test_init'
+
+        if os.path.isfile(testFilePath):
+            os.remove(testFilePath)
+
+        pbb = PersistentByteBuffer(testFilePath)
+
+        self.assertIsInstance(pbb, PersistentByteBuffer)
+        self.assertTrue(os.path.isfile(testFilePath))
+
+        os.remove(testFilePath)
+
+    def test_init_overwrite(self) -> None:
+        testFilePath : str = './tests/output/pbb_test_init_overwrite'
+
+        with open(testFilePath, 'w') as f:
+            f.write('This is some content!')
+
+        pbb = PersistentByteBuffer(testFilePath, overwrite=True)
+
+        self.assertIsInstance(pbb, PersistentByteBuffer)
+        self.assertTrue(os.path.isfile(testFilePath))
+
+        with open(testFilePath, 'r') as f:
+            self.assertEqual(f.read(), '')
+
+        os.remove(testFilePath)
+    
+    def test_init_no_overwrite(self) -> None:
+        testFilePath : str = './tests/output/pbb_test_init_no_overwrite'
+
+        with open(testFilePath, 'w') as f:
+            f.write('This is some content!')
+
+        try:
+            with self.assertRaises(ValueError) as cm:
+                pbb = PersistentByteBuffer(testFilePath)
+
+            self.assertEqual(cm.exception.args[0], 
+                f"A file already exists at {os.path.realpath(testFilePath)}")
+        finally:
+            os.remove(testFilePath)
+
+class TestPersistentByteBufferFunctions(unittest.TestCase):
+    _pbb : PersistentByteBuffer = None
+
+    def setUp(self) -> None:
+        filepath = './tests/output/pbb_test_functions'
+        if os.path.isfile(filepath):
+            os.remove(filepath)
+
+        self._pbb = PersistentByteBuffer(filepath, 10)
+    
+    def tearDown(self) -> None:
+        os.remove(self._pbb._filepath)
+
+    def test_filepath_property(self) -> None:
+        self.assertEqual(self._pbb._filepath, self._pbb.filepath)
+    
+    def test_no_overflow_write(self) -> None:
+        self._pbb.append(b'test!')
+
+        with open(self._pbb.filepath, 'rb') as f:
+            self.assertSequenceEqual(f.read(), b'')
+    
+    def test_overflow_write(self) -> None:
+        self._pbb.append(b'Ruby Rose!')
+
+        self._pbb.append(b'Yang')
+
+        with open(self._pbb.filepath, 'rb') as f:
+            self.assertSequenceEqual(f.read(), b'Ruby')
+    
+    def test_super_overflow_write(self) -> None:
+        self._pbb.append(b'Ruby Rose!')
+
+        self._pbb.append(b'Yang Xiao Long')
+
+        with open(self._pbb.filepath, 'rb') as f:
+            self.assertSequenceEqual(f.read(), b'Ruby Rose!Yang')
+
+ 
 if __name__ == '__main__':
     unittest.main()
