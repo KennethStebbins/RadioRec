@@ -204,7 +204,6 @@ class RedundantRadioStream(Thread):
             self._write_lock.acquire()
             log.debug("Write lock acquired")
 
-            # Ensure 30% of the desired cache length remains.
             self.byte_buffer.append(
                 old_primary.byte_buffer.readUpToRemainingLength(
                     self._sync_len
