@@ -169,16 +169,14 @@ class RedundantRadioStream(Thread):
     _write_lock : RLock = None
     _radio_stream_manager : RadioStreamManager = None
     _sync_len : int = 10000
-    _sync_attempts : int = 5
     _desired_stream_cache_len : int = 200000
 
     def __init__(self, redundancy : int = 2, buffer_size : int = 307200, 
-            start_attempts : int = 3, sync_len : int = 10000, sync_attempts : int = 5,
+            start_attempts : int = 3, sync_len : int = 10000,
             desired_stream_cache_len : int = 200000) -> None:
         self._byte_buffer = ByteBuffer(buffer_size)
         self._write_lock = RLock()
         self._sync_len = sync_len
-        self._sync_attempts = sync_attempts
         self._desired_stream_cache_len = desired_stream_cache_len
 
         self._radio_stream_manager = RadioStreamManager(redundancy, buffer_size, 
@@ -217,18 +215,14 @@ class RedundantRadioStream(Thread):
 
             # If the new primary doesn't already have the sync bytes in it,
             # it probably never will. So only try once.
-            successful = False
             try:
                 new_primary.byte_buffer.seekPastSequence(syncBytes)
                 log.debug("Successfuly synced new primary stream!")
-                successful = True
             except ValueError:
-                log.debug(f"Failed to sync new primary stream", exc_info=True)
+                log.warning(f"Failed to sync new primary stream", exc_info=True)
+                log.warning("Data will just be appended normally. This may " + 
+                    "result in a \"jump\" in the recording.")
             
-            if not successful:
-                log.warning(f"Failed to sync new primary stream after {self._sync_attempts} attempts")
-                log.warning("Data will just be appended normally. This may result in a \"jump\" in the recording.")
-
         finally:
             log.debug("Releasing write lock")
             self._write_lock.release()
