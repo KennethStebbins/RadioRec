@@ -1,7 +1,8 @@
 from __future__ import annotations
+from pathlib import Path
 from threading import Event, RLock
 from typing import Tuple
-import logging
+import logging, os
 
 log = logging.getLogger('RadioRec')
 
@@ -84,6 +85,8 @@ class ByteBuffer:
                 self._index = 0
             log.debug(f"New self index: {self._index}")
 
+        except TypeError as e:
+            raise ValueError("Value given for \"bytes\" is not a bytes-like object.") from e
         finally:
             self._byte_array_lock.release()
             log.debug("Byte array lock released")
@@ -374,3 +377,46 @@ class ByteBuffer:
         with self._byte_array_lock:
             self.seekToSequence(seq)
             self.seek(len(seq))
+
+class PersistentByteBuffer(ByteBuffer):
+    _filepath : str = None
+
+    def __init__(self, filepath : str, length: int = 50000,
+            overwrite : bool = False) -> None:
+        self._filepath = os.path.realpath(filepath)
+
+        if os.path.isfile(self._filepath):
+            if overwrite:
+                os.remove(self._filepath)
+            else:
+                raise ValueError(f"A file already exists at {self._filepath}")
+        
+        # Create the file, also testing whether we can write there at all
+        Path(self._filepath).touch()
+
+        super().__init__(length=length)
+    
+    @property
+    def filepath(self) -> str:
+        return self._filepath
+        
+    def _writeToFile(self, b : bytes) -> None:
+        with open(self._filepath, 'ab') as f:
+            f.write(b)
+    
+    def append(self, b : bytes) -> None:
+        bLen = len(b)
+
+        with self._byte_array_lock:
+            newLen = self._readable_length + bLen
+
+            if newLen > self.length:
+                writeLen = newLen - self.length
+            
+                if writeLen > self._readable_length:
+                    self._writeToFile(self.read())
+                    self._writeToFile(b[:self.length * -1])
+                else:
+                    self._writeToFile(self.read(writeLen))
+            
+            super().append(b)
