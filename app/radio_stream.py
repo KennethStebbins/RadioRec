@@ -169,15 +169,12 @@ class RedundantRadioStream(Thread):
     _write_lock : RLock = None
     _radio_stream_manager : RadioStreamManager = None
     _sync_len : int = 10000
-    _stream_cache_len : int = 200000
 
     def __init__(self, redundancy : int = 2, buffer_size : int = 307200, 
-            start_attempts : int = 3, sync_len : int = 10000,
-            stream_cache_len : int = 200000) -> None:
+            start_attempts : int = 3, sync_len : int = 10000) -> None:
         self._byte_buffer = ByteBuffer(buffer_size)
         self._write_lock = RLock()
         self._sync_len = sync_len
-        self._stream_cache_len = stream_cache_len
 
         self._radio_stream_manager = RadioStreamManager(redundancy, buffer_size, 
                                         start_attempts, daemon=True)
@@ -198,7 +195,7 @@ class RedundantRadioStream(Thread):
         prs = self._radio_stream_manager.primary_radio_stream
         with self._write_lock:
             self.byte_buffer.append(prs.byte_buffer.readUpToRemainingLength(
-                self._stream_cache_len))
+                self._sync_len))
         event.wait(.250)
 
     def handleFailover(self, old_primary : RadioStream, new_primary : RadioStream) -> None:
@@ -208,8 +205,11 @@ class RedundantRadioStream(Thread):
             log.debug("Write lock acquired")
 
             # Ensure 30% of the desired cache length remains.
-            readLen = int(self._stream_cache_len * 0.3)
-            self.byte_buffer.append(old_primary.byte_buffer.readUpToRemainingLength(readLen))
+            self.byte_buffer.append(
+                old_primary.byte_buffer.readUpToRemainingLength(
+                    self._sync_len
+                )
+            )
 
             syncBytes = self.byte_buffer.readFromEnd(self._sync_len, consume=False)
 
