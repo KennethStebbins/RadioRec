@@ -1,7 +1,9 @@
-import unittest
+from typing import Callable
 from app.radio_stream import RadioStream, RadioStreamManager, RedundantRadioStream
 from threading import Event
 from unittest import TestCase, main as start_test
+from unittest.loader import TestLoader
+from unittest.suite import TestSuite
 
 class TestRadioStreamCreation(TestCase):
     _dummyURL : str = "https://kennethstebbins.com"
@@ -54,7 +56,7 @@ class TestRadioStreamStartAndStop(TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.rs = RadioStream()
+        cls._rs = RadioStream()
 
     def test_0_start(self):
         e = Event()
@@ -78,7 +80,7 @@ class TestRadioStreamStartAndStop(TestCase):
 
         e.wait(1)
 
-        self.assertFalse(self._rs.is_alive)
+        self.assertFalse(self._rs.is_alive())
 
 class TestRadioStreamManagerCreation(TestCase):
     def test_init(self):
@@ -142,17 +144,16 @@ class TestRadioStreamManagerFailoverHandlers(TestCase):
     def _handle_failover(self, old : RadioStream, new : RadioStream) -> None:
         self.fail("This handler should not have been called")
 
-    def test_0_add_handler(self):
+    def test_0_add_remove_handler(self):
         rsm = self._rsm
 
+        ## Add
         rsm.add_stream_failover_handler(self._handle_failover)
 
         self.assertIn(self._handle_failover, rsm._stream_failover_handlers)
         self.assertEqual(len(rsm._stream_failover_handlers), 1)
 
-    def test_1_remove_handler(self):
-        rsm = self._rsm
-
+        ## Remove
         rsm.remove_stream_failover_handler(self._handle_failover)
 
         self.assertEqual(len(rsm._stream_failover_handlers), 0)
@@ -236,7 +237,120 @@ class TestRadioStreamManagerStartAndFailover(TestCase):
         self.assertNotIn(rsm.primary_radio_stream, oldStreams)
         for stream in rsm._redundant_radio_streams:
             self.assertNotIn(stream, oldStreams)
-        
+
+class TestRedundantRadioStreamCreationAndProperties(TestCase):
+    def test_init(self) -> None:
+        rrs = RedundantRadioStream()
+
+        self.assertIsInstance(rrs, RedundantRadioStream)
+        self.assertIsInstance(rrs._radio_stream_manager, RadioStreamManager)
+        self.assertIn(rrs.handleFailover, 
+            rrs._radio_stream_manager._stream_failover_handlers)
+    
+    def test_init_redundancy(self) -> None:
+        expected = 5
+
+        rrs = RedundantRadioStream(redundancy=expected)
+
+        self.assertEqual(rrs._radio_stream_manager._desired_redundancy, expected)
+    
+    def test_init_buffer_size(self) -> None:
+        expected = 38271
+
+        rrs = RedundantRadioStream(buffer_size=expected)
+
+        self.assertEqual(rrs._radio_stream_manager._desired_buffer_size, expected)
+        self.assertEqual(rrs._byte_buffer.length, expected)
+    
+    def test_init_start_attempts(self) -> None:
+        expected = 5
+
+        rrs = RedundantRadioStream(start_attempts=expected)
+
+        self.assertEqual(rrs._radio_stream_manager._stream_start_attempts, expected)
+    
+    def test_init_sync_len(self) -> None:
+        expected = 3824
+
+        rrs = RedundantRadioStream(sync_len=expected)
+
+        self.assertEqual(rrs._sync_len, expected)
+    
+    def test_property_byte_buffer(self) -> None:
+        rrs = RedundantRadioStream()
+
+        self.assertEqual(rrs._byte_buffer, rrs.byte_buffer)
+
+class TestRedundantRadioStreamFunctions(TestCase):
+    _rrs : RedundantRadioStream = None
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._rrs = RedundantRadioStream()
+
+    def test_0_start(self) -> None:
+        rrs = self._rrs
+        e = Event()
+
+        rrs.start()
+
+        e.wait(80)
+
+        self.assertGreater(rrs.byte_buffer.readable_length, 0)
+        oldReadableLen = rrs.byte_buffer.readable_length
+
+        e.wait(5)
+
+        self.assertGreater(rrs.byte_buffer.readable_length, oldReadableLen)
+
+    def test_1_failover(self) -> None:
+        rrs = self._rrs
+        rsm = rrs._radio_stream_manager
+        oldPRS = rsm.primary_radio_stream
+        e = Event()
+
+        reference = RadioStream()
+        reference.start()
+
+        e.wait(30)
+
+        testBytes = rrs.byte_buffer.readFromEnd(70000, consume=False)[0:50000]
+
+        try:
+            reference.byte_buffer.seekToSequence(testBytes)
+            refBytes = reference.byte_buffer.read()
+        except ValueError as ex:
+            raise RuntimeError("Could not find bytes from the old PRS in " + 
+                "the reference stream") from ex
+
+        oldPRS.stop()
+
+        e.wait(20)
+
+        newPRS = rsm.primary_radio_stream
+        self.assertNotEqual(oldPRS, newPRS)
+
+        refBytes += reference.byte_buffer.readUpToRemainingLength(10000)
+
+        try:
+            rrs.byte_buffer._findSequence(refBytes)
+        except ValueError as ex:
+            print(ex)
+            self.fail("Could not find reference bytes in redundant radio " + 
+                "stream's byte buffer")
+
+
+
+# def load_tests(loader : TestLoader, tests, pattern) -> TestSuite:
+#     suite = TestSuite()
+
+#     tests = loader.loadTestsFromTestCase(TestRedundantRadioStreamCreationAndProperties)
+#     suite.addTests(tests)
+
+#     tests = loader.loadTestsFromTestCase(TestRedundantRadioStreamFunctions)
+#     suite.addTests(tests)
+
+#     return suite
 
 if __name__ == '__main__':
-    start_test(failfast=True)
+    start_test()
