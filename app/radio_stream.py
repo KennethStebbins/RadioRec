@@ -178,6 +178,8 @@ class RedundantRadioStream(Thread):
 
         self._radio_stream_manager = RadioStreamManager(redundancy, buffer_size, 
                                         start_attempts, daemon=True)
+        self._radio_stream_manager.add_stream_failover_handler(
+            self.handleFailover)
 
         super().__init__(daemon=True)
 
