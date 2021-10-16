@@ -191,7 +191,7 @@ class RedundantRadioStream(Thread):
         return self._byte_buffer
     
     def run(self):
-        if not self._radio_stream_manager.is_alive:
+        if not self._radio_stream_manager.is_alive():
             self._radio_stream_manager.run()
 
         # TODO: Read a bit, write it to the main buffer
