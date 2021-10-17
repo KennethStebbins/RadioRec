@@ -7,7 +7,7 @@ from threading import Event, RLock, Thread
 from typing import Callable, Iterable, List
 
 from app.get_stream_url import get_stream_url
-from app.byte_buffer import ByteBuffer
+from app.byte_buffer import ByteBuffer, PersistentByteBuffer
 
 log = logging.getLogger('RadioRec')
 
@@ -134,12 +134,14 @@ class RadioStreamManager(Thread):
                 # make a new stream
                 failover_stream = self._start_new_stream()
             
-            # Don't call handlers unless we're actually failing over
-            if self._primary_radio_stream is not None:
-                for handler in self._stream_failover_handlers:
-                    handler(self._primary_radio_stream, failover_stream)
-            
+            oldPRS = self._primary_radio_stream
             self._primary_radio_stream = failover_stream
+            
+            # Don't call handlers unless we're actually failing over
+            if oldPRS is not None:
+                for handler in self._stream_failover_handlers:
+                    handler(oldPRS, failover_stream)
+            
 
     def run(self):
         event = Event()
@@ -171,15 +173,27 @@ class RedundantRadioStream(Thread):
     _sync_len : int = 10000
     _should_run : bool = True
 
-    def __init__(self, redundancy : int = 2, buffer_size : int = 307200, 
-            start_attempts : int = 3, sync_len : int = 10000) -> None:
-        self._byte_buffer = ByteBuffer(buffer_size)
+    def __init__(self, redundancy : int = 2, 
+            redundant_buffer_size : int = 307200,
+            byte_buffer : ByteBuffer = None,
+            cache_buffer_size : int = 307200, start_attempts : int = 3, 
+            sync_len : int = 10000) -> None:
+        if byte_buffer is None:
+            self._byte_buffer = ByteBuffer(redundant_buffer_size)
+        else:
+            self._byte_buffer = byte_buffer
+
+        if sync_len > self.byte_buffer.length or \
+                sync_len > cache_buffer_size:
+            raise ValueError("Sync length cannot be larger than the " + 
+                    "redundant or cache buffer lengths")
+
         self._write_lock = RLock()
         self._sync_len = sync_len
         self._should_run = True
 
-        self._radio_stream_manager = RadioStreamManager(redundancy, buffer_size, 
-                                        start_attempts)
+        self._radio_stream_manager = RadioStreamManager(redundancy, 
+                                        cache_buffer_size, start_attempts)
         self._radio_stream_manager.add_stream_failover_handler(
             self.handleFailover)
 
@@ -197,14 +211,18 @@ class RedundantRadioStream(Thread):
         event = Event()
 
         while self._should_run:
-            prs = self._radio_stream_manager.primary_radio_stream
-            if prs is None:
+            rsm = self._radio_stream_manager
+            if rsm.primary_radio_stream is None:
                 event.wait(.250)
                 continue
 
             with self._write_lock:
-                self.byte_buffer.append(prs.byte_buffer.readUpToRemainingLength(
-                    self._sync_len))
+                self.byte_buffer.append(
+                    rsm.primary_radio_stream.byte_buffer
+                        .readUpToRemainingLength(
+                            self._sync_len
+                        )
+                )
             event.wait(.250)
 
     def handleFailover(self, old_primary : RadioStream, new_primary : RadioStream) -> None:
@@ -237,3 +255,24 @@ class RedundantRadioStream(Thread):
 
     def stop(self) -> None:
         self._should_run = False
+
+class PersistentRedundantRadioStream(RedundantRadioStream):
+    _filepath : str = None
+
+    def __init__(self, filepath : str, redundancy: int = 2, 
+            persistent_buffer_size: int = 50000, 
+            cache_buffer_size : int = 307200, overwrite : bool = False, 
+            start_attempts: int = 3, sync_len: int = 10000) -> None:
+        
+        byteBuffer = PersistentByteBuffer(filepath, 
+                        length=persistent_buffer_size, 
+                        overwrite=overwrite)
+        self._filepath = filepath
+
+        super().__init__(redundancy=redundancy, byte_buffer=byteBuffer, 
+            cache_buffer_size=cache_buffer_size, 
+            start_attempts=start_attempts, sync_len=sync_len)
+    
+    @property
+    def filepath(self) -> str:
+        return self._filepath
