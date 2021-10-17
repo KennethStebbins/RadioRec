@@ -1,9 +1,12 @@
-from typing import Callable
-from app.radio_stream import RadioStream, RadioStreamManager, RedundantRadioStream
+import os
 from threading import Event
 from unittest import TestCase, main as start_test
 from unittest.loader import TestLoader
 from unittest.suite import TestSuite
+
+from app.byte_buffer import ByteBuffer, PersistentByteBuffer
+from app.radio_stream import PersistentRedundantRadioStream, RadioStream, \
+                                RadioStreamManager, RedundantRadioStream
 
 class TestRadioStreamCreation(TestCase):
     _dummyURL : str = "https://kennethstebbins.com"
@@ -243,9 +246,8 @@ class TestRedundantRadioStreamCreationAndProperties(TestCase):
         rrs = RedundantRadioStream()
 
         self.assertIsInstance(rrs, RedundantRadioStream)
+        self.assertIsInstance(rrs.byte_buffer, ByteBuffer)
         self.assertIsInstance(rrs._radio_stream_manager, RadioStreamManager)
-        self.assertIn(rrs.handleFailover, 
-            rrs._radio_stream_manager._stream_failover_handlers)
     
     def test_init_redundancy(self) -> None:
         expected = 5
@@ -254,13 +256,20 @@ class TestRedundantRadioStreamCreationAndProperties(TestCase):
 
         self.assertEqual(rrs._radio_stream_manager._desired_redundancy, expected)
     
-    def test_init_buffer_size(self) -> None:
+    def test_init_redundant_buffer_size(self) -> None:
         expected = 38271
 
-        rrs = RedundantRadioStream(buffer_size=expected)
+        rrs = RedundantRadioStream(redundant_buffer_size=expected)
 
-        self.assertEqual(rrs._radio_stream_manager._desired_buffer_size, expected)
         self.assertEqual(rrs._byte_buffer.length, expected)
+    
+    def test_init_cache_buffer_size(self) -> None:
+        expected = 39201
+
+        rrs = RedundantRadioStream(cache_buffer_size=expected)
+
+        self.assertEqual(rrs._radio_stream_manager._desired_buffer_size, 
+            expected)
     
     def test_init_start_attempts(self) -> None:
         expected = 5
@@ -275,6 +284,31 @@ class TestRedundantRadioStreamCreationAndProperties(TestCase):
         rrs = RedundantRadioStream(sync_len=expected)
 
         self.assertEqual(rrs._sync_len, expected)
+    
+    def test_init_byte_buffer(self) -> None:
+        bb = ByteBuffer(17659)
+
+        rrs = RedundantRadioStream(byte_buffer=bb)
+
+        self.assertEqual(rrs.byte_buffer, bb)
+    
+    def test_init_undersized_redundant_buffer(self) -> None:
+        with self.assertRaises(ValueError) as cm:
+            rrs = RedundantRadioStream(redundant_buffer_size=100, 
+                    sync_len=1000)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Sync length cannot be larger than the redundant or ' + 
+            'cache buffer lengths')
+    
+    def test_init_undersized_cache_buffer(self) -> None:
+        with self.assertRaises(ValueError) as cm:
+            rrs = RedundantRadioStream(cache_buffer_size=100, 
+                    sync_len=1000)
+
+        self.assertEqual(cm.exception.args[0], 
+            'Sync length cannot be larger than the redundant or ' + 
+            'cache buffer lengths')
     
     def test_property_byte_buffer(self) -> None:
         rrs = RedundantRadioStream()
@@ -294,7 +328,7 @@ class TestRedundantRadioStreamFunctions(TestCase):
 
         rrs.start()
 
-        e.wait(80)
+        e.wait(50)
 
         self.assertGreater(rrs.byte_buffer.readable_length, 0)
         oldReadableLen = rrs.byte_buffer.readable_length
@@ -306,7 +340,6 @@ class TestRedundantRadioStreamFunctions(TestCase):
     def test_1_failover(self) -> None:
         rrs = self._rrs
         rsm = rrs._radio_stream_manager
-        oldPRS = rsm.primary_radio_stream
         e = Event()
 
         reference = RadioStream()
@@ -323,31 +356,119 @@ class TestRedundantRadioStreamFunctions(TestCase):
             raise RuntimeError("Could not find bytes from the old PRS in " + 
                 "the reference stream") from ex
 
+        oldPRS = rsm.primary_radio_stream
         oldPRS.stop()
 
-        e.wait(20)
+        e.wait(10)
 
         newPRS = rsm.primary_radio_stream
         self.assertNotEqual(oldPRS, newPRS)
 
         refBytes += reference.byte_buffer.readUpToRemainingLength(10000)
 
+        e.wait(5)
+        
         try:
             rrs.byte_buffer._findSequence(refBytes)
         except ValueError as ex:
             print(ex)
-            self.fail("Could not find reference bytes in redundant radio " + 
-                "stream's byte buffer")
+            self.fail("Failed to find reference sequence in redundant byte buffer.")
 
 
+class TestPersistentRedundantRadioStreamCreation(TestCase):
+    _filepath = './tests/output/prrs.aac'
+
+    def tearDown(self) -> None:
+        if os.path.isfile(self._filepath):
+            os.remove(self._filepath)
+
+    def test_init(self) -> None:
+        if os.path.isfile(self._filepath):
+            os.remove(self._filepath)
+
+        prrs = PersistentRedundantRadioStream(self._filepath)
+
+        self.assertIsInstance(prrs, PersistentRedundantRadioStream)
+        self.assertIsInstance(prrs.byte_buffer, PersistentByteBuffer)
+        self.assertTrue(os.path.isfile(self._filepath))
+
+    def test_init_override(self) -> None:
+        with open(self._filepath, 'w') as f:
+            f.write('Some content!!')
+
+        prrs = PersistentRedundantRadioStream(self._filepath, overwrite=True)
+
+        self.assertIsInstance(prrs, PersistentRedundantRadioStream)
+        self.assertIsInstance(prrs.byte_buffer, PersistentByteBuffer)
+        self.assertTrue(os.path.isfile(self._filepath))
+
+        with open(self._filepath, 'r') as f:
+            self.assertEqual(f.read(), '')
+    
+    def test_init_redundancy(self) -> None:
+        expected = 5
+
+        prrs = PersistentRedundantRadioStream(self._filepath, 
+                redundancy=expected)
+
+        self.assertEqual(prrs._radio_stream_manager._desired_redundancy, 
+            expected)
+    
+    def test_init_persistent_buffer_size(self) -> None:
+        expected = 38271
+
+        prrs = PersistentRedundantRadioStream(self._filepath, 
+                persistent_buffer_size=expected)
+
+        self.assertEqual(prrs._byte_buffer.length, expected)
+    
+    def test_init_cache_buffer_size(self) -> None:
+        expected = 39201
+
+        prrs = PersistentRedundantRadioStream(self._filepath, 
+                cache_buffer_size=expected)
+
+        self.assertEqual(prrs._radio_stream_manager._desired_buffer_size, 
+            expected)
+    
+    def test_init_start_attempts(self) -> None:
+        expected = 5
+
+        rrs = PersistentRedundantRadioStream(self._filepath, 
+                start_attempts=expected)
+
+        self.assertEqual(rrs._radio_stream_manager._stream_start_attempts, expected)
+    
+    def test_init_sync_len(self) -> None:
+        expected = 3824
+
+        rrs = PersistentRedundantRadioStream(self._filepath, 
+                sync_len=expected)
+
+        self.assertEqual(rrs._sync_len, expected)
+
+class TestPersistentRedundantRadioStream(TestCase):
+    _filepath = './tests/output/prrs.aac'
+
+    def test_start(self) -> None:
+        e = Event()
+
+        prrs = PersistentRedundantRadioStream(self._filepath, overwrite=True)
+
+        with open(self._filepath, 'rb') as f:
+            self.assertEqual(f.read(), b'')
+        
+        prrs.start()
+
+        e.wait(45)
+
+        with open(self._filepath, 'rb') as f:
+            self.assertGreater(len(f.read(1024)), 0)
 
 # def load_tests(loader : TestLoader, tests, pattern) -> TestSuite:
 #     suite = TestSuite()
 
-#     tests = loader.loadTestsFromTestCase(TestRedundantRadioStreamCreationAndProperties)
-#     suite.addTests(tests)
-
-#     tests = loader.loadTestsFromTestCase(TestRedundantRadioStreamFunctions)
+#     tests = loader.loadTestsFromTestCase(DebuggingStreamSync)
 #     suite.addTests(tests)
 
 #     return suite
