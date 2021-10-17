@@ -464,6 +464,10 @@ class TestPersistentRedundantRadioStream(TestCase):
 
         with open(self._filepath, 'rb') as f:
             self.assertGreater(len(f.read(1024)), 0)
+        
+    def tearDown(self) -> None:
+        if os.path.isfile(self._filepath):
+            os.remove(self._filepath)
 
 # def load_tests(loader : TestLoader, tests, pattern) -> TestSuite:
 #     suite = TestSuite()
