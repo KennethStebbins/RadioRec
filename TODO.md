@@ -1,4 +1,9 @@
 - [ ] Modify RadioStreamManager to select the stream with the largest buffer when failing over
+- [ ] ? Give PersistentRedundantRadioStream a better name.
+- [ ] Clean up and better standardize tests
+    - Make sure all test functions are annotated as returning None
+    - Combine related tests in test_byte_buffer into a class, instead of giving each case its own class
+- [ ] Clean up and better standardize quote usage
 - [x] Add locks back to helper methods in ByteBuffer
 - [x] Write unit tests for new ByteBuffer functionality
 - [x] Refactor ByteBuffer to use private variables properly and expose some as properties
