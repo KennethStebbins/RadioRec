@@ -380,10 +380,12 @@ class ByteBuffer:
 
 class PersistentByteBuffer(ByteBuffer):
     _filepath : str = None
+    _should_write : bool = True
 
     def __init__(self, filepath : str, length: int = 50000,
-            overwrite : bool = False) -> None:
+            overwrite : bool = False, should_write : bool = True) -> None:
         self._filepath = os.path.realpath(filepath)
+        self._should_write = should_write
 
         if os.path.isfile(self._filepath):
             if overwrite:
@@ -399,8 +401,19 @@ class PersistentByteBuffer(ByteBuffer):
     @property
     def filepath(self) -> str:
         return self._filepath
+    
+    @property
+    def should_write(self) -> bool:
+        return self.should_write
+    
+    @should_write.setter
+    def should_write(self, value : bool) -> None:
+        self.should_write = value
         
     def _writeToFile(self, b : bytes) -> None:
+        if not self._should_write:
+            return
+
         with open(self._filepath, 'ab') as f:
             f.write(b)
     
@@ -420,3 +433,7 @@ class PersistentByteBuffer(ByteBuffer):
                     self._writeToFile(self.read(writeLen))
             
             super().append(b)
+
+    def writeAll(self) -> None:
+        self._writeToFile(self.read())
+    
