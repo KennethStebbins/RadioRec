@@ -1,9 +1,19 @@
-- [ ] Modify RadioStreamManager to select the stream with the largest buffer when failing over
+- [ ] Write unit tests:
+    - [ ] ...for RSM failing over to the longest stream.
+    - [ ] ...for starting and stopping recording on PersistentByteBuffer
+    - [ ] ...for starting and stopping recording on PRRS
+    - [ ] ...for writing everything to disk on PersistentByteBuffer
+    - [ ] ...for writing everything to disk on PRRS
 - [ ] ? Give PersistentRedundantRadioStream a better name.
 - [ ] Clean up and better standardize tests
     - Make sure all test functions are annotated as returning None
     - Combine related tests in test_byte_buffer into a class, instead of giving each case its own class
 - [ ] Clean up and better standardize quote usage
+- [ ] Build CLI
+- [ ] Document!!
+- [x] Build in functionality to the PersistentByteBuffer and PRRS to start and stop writing data to disk.
+- [x] Build in functionality to PersistentByteBuffer and PRRS to dump everything to disk
+- [x] Modify RadioStreamManager to select the stream with the largest buffer when failing over
 - [x] Add locks back to helper methods in ByteBuffer
 - [x] Write unit tests for new ByteBuffer functionality
 - [x] Refactor ByteBuffer to use private variables properly and expose some as properties
