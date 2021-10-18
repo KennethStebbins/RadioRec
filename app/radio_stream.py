@@ -124,15 +124,22 @@ class RadioStreamManager(Thread):
         with self._radio_stream_lock:
             failover_stream : RadioStream = None
             for stream in self._redundant_radio_streams:
-                if stream.is_alive():
+                if stream.is_alive() and \
+                        (
+                            failover_stream is None or
+                            failover_stream.byte_buffer.readable_length <
+                                stream.byte_buffer.readable_length
+                        ):
                     failover_stream = stream
-                    self._redundant_radio_streams.remove(stream)
-                    break
+                    
             
             if failover_stream is None:
                 # If all the redundant streams were dead, too, just
                 # make a new stream
                 failover_stream = self._start_new_stream()
+            else:
+                self._redundant_radio_streams.remove(failover_stream)
+
             
             oldPRS = self._primary_radio_stream
             self._primary_radio_stream = failover_stream
@@ -276,3 +283,14 @@ class PersistentRedundantRadioStream(RedundantRadioStream):
     @property
     def filepath(self) -> str:
         return self._filepath
+    
+    @property
+    def should_write(self) -> bool:
+        return self._byte_buffer.should_write
+    
+    @should_write.setter
+    def should_write(self, value : bool) -> None:
+        self._byte_buffer.should_write = value
+
+    def writeAll(self) -> None:
+        self._byte_buffer.writeAll()
