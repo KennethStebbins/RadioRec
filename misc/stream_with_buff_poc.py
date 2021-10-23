@@ -15,7 +15,7 @@ def go() -> None:
     log.info('Creating stream one')
     streamOne = RadioStream(daemon=True)
     log.info('Stream one created')
-    log.info(f"Stream one URL: {streamOne.url}")
+    log.info(f"Stream one URL: {streamOne.stream_url}")
     streamOne.start()
     log.info('Started stream one')
 
@@ -27,7 +27,7 @@ def go() -> None:
     log.info('Creating stream two')
     streamTwo = RadioStream(daemon=True)
     log.info('Stream two created')
-    log.info(f"Stream two URL: {streamTwo.url}")
+    log.info(f"Stream two URL: {streamTwo.stream_url}")
     streamTwo.start()
     log.info('Started stream two')
 
