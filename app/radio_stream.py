@@ -276,8 +276,6 @@ class RedundantRadioStream(Thread):
         self._should_run = False
 
 class PersistentRedundantRadioStream(RedundantRadioStream):
-    _filepath : str = None
-
     def __init__(self, filepath : str, page_url : str, redundancy: int = 2, 
             persistent_buffer_size: int = 50000, 
             cache_buffer_size : int = 307200, overwrite : bool = False, 
@@ -294,7 +292,11 @@ class PersistentRedundantRadioStream(RedundantRadioStream):
     
     @property
     def filepath(self) -> str:
-        return self._filepath
+        return self._byte_buffer.filepath
+
+    @filepath.setter
+    def filepath(self, value : str) -> None:
+        self._byte_buffer.filepath = value
     
     @property
     def should_write(self) -> bool:
@@ -303,6 +305,7 @@ class PersistentRedundantRadioStream(RedundantRadioStream):
     @should_write.setter
     def should_write(self, value : bool) -> None:
         self._byte_buffer.should_write = value
+
 
     def writeAll(self) -> None:
         self._byte_buffer.writeAll()
