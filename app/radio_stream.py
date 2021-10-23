@@ -1,3 +1,4 @@
+from argparse import ArgumentError
 import logging
 from os import devnull
 from requests import request
@@ -13,7 +14,7 @@ log = logging.getLogger('RadioRec')
 
 class RadioStream(Thread):
     _byte_buffer : ByteBuffer = None
-    _url : str = None
+    _stream_url : str = None
     _preroll_len : int = 63500
     _http_stream : HTTPResponse = None
     
@@ -22,36 +23,40 @@ class RadioStream(Thread):
         return self._byte_buffer
     
     @property
-    def url(self):
-        return self._url
+    def stream_url(self):
+        return self._stream_url
 
-    def __init__(self, buffer_size : int = 307200, attempts : int = 3, 
-            preroll_len : int = 63500, url = None) -> None:
+    def __init__(self, page_url : str = None, buffer_size : int = 307200, 
+            attempts : int = 3, preroll_len : int = 63500,
+            stream_url : str = None) -> None:
         self._byte_buffer = ByteBuffer(buffer_size)
         self._preroll_len = preroll_len
 
-        if url is None:
-            self._getURL(attempts=attempts)
+        if stream_url is None:
+            if page_url is None:
+                raise ValueError("Must provide either page_url or stream_url")
+            
+            self._getURL(page_url, attempts=attempts)
         else:
-            self._url = url
+            self._stream_url = stream_url
 
         super().__init__(daemon=True)
 
-    def _getURL(self, attempts : int = 3) -> None:
+    def _getURL(self, page_url : str, attempts : int = 3) -> None:
         for i in range(0, attempts):
             try:
-                self._url = get_stream_url()
-                if self._url is not None:
+                self._stream_url = get_stream_url(page_url=page_url)
+                if self._stream_url is not None:
                     break
             except TimeoutException:
                 log.debug(f"Failed to get stream URL: Attempt #{i + 1}")
 
-        if self._url is None:
+        if self._stream_url is None:
             log.warning(f"Ran out of attempts to get stream url")
             raise RuntimeError("Failed to get a stream URL")
 
     def run(self) -> None:
-        with request('GET', self._url, stream=True) as r:
+        with request('GET', self._stream_url, stream=True) as r:
             self._http_stream : HTTPResponse = r.raw
 
             # Dump preroll data
@@ -73,24 +78,27 @@ class RadioStreamManager(Thread):
     _primary_radio_stream : RadioStream = None
     _redundant_radio_streams : List[RadioStream] = None
     _radio_stream_lock : RLock = None
+    _page_url : str = None
     _desired_redundancy : int = 2
     _desired_buffer_size : int = 307200
     _stream_start_attempts : int = 3
     _stream_failover_handlers : \
         List[Callable[[RadioStream, RadioStream], None]] = None
 
-    def __init__(self, redundancy : int = 2, buffer_size : int = 307200, 
-            start_attempts : int = 3,
+    def __init__(self, page_url : str, redundancy : int = 2, 
+            buffer_size : int = 307200, start_attempts : int = 3,
             on_stream_failover : Callable[[RadioStream, RadioStream], None] = None) -> None:
         if redundancy < 1:
             raise ValueError('Cannot have a redundancy less than 1')
 
         self._redundant_radio_streams = []
         self._radio_stream_lock = RLock()
+        self._stream_failover_handlers = []
+
+        self._page_url = page_url
         self._desired_redundancy = redundancy
         self._desired_buffer_size = buffer_size
         self._stream_start_attempts = start_attempts
-        self._stream_failover_handlers = []
         
         if on_stream_failover is not None:
             self.add_stream_failover_handler(on_stream_failover)
@@ -101,7 +109,9 @@ class RadioStreamManager(Thread):
         result = None
         while result is None:
             try:
-                result = RadioStream(self._desired_buffer_size, self._stream_start_attempts)
+                result = RadioStream(self._page_url, 
+                            buffer_size=self._desired_buffer_size, 
+                            attempts=self._stream_start_attempts)
                 result.start()
             except TimeoutException:
                 log.debug("RadioStream failed to start due to TimeoutException. Will try again.")
@@ -180,7 +190,7 @@ class RedundantRadioStream(Thread):
     _sync_len : int = 10000
     _should_run : bool = True
 
-    def __init__(self, redundancy : int = 2, 
+    def __init__(self, page_url : str, redundancy : int = 2, 
             redundant_buffer_size : int = 307200,
             byte_buffer : ByteBuffer = None,
             cache_buffer_size : int = 307200, start_attempts : int = 3, 
@@ -199,8 +209,10 @@ class RedundantRadioStream(Thread):
         self._sync_len = sync_len
         self._should_run = True
 
-        self._radio_stream_manager = RadioStreamManager(redundancy, 
-                                        cache_buffer_size, start_attempts)
+        self._radio_stream_manager = RadioStreamManager(page_url, 
+                                        redundancy=redundancy, 
+                                        buffer_size=cache_buffer_size, 
+                                        start_attempts=start_attempts)
         self._radio_stream_manager.add_stream_failover_handler(
             self.handleFailover)
 
@@ -266,7 +278,7 @@ class RedundantRadioStream(Thread):
 class PersistentRedundantRadioStream(RedundantRadioStream):
     _filepath : str = None
 
-    def __init__(self, filepath : str, redundancy: int = 2, 
+    def __init__(self, filepath : str, page_url : str, redundancy: int = 2, 
             persistent_buffer_size: int = 50000, 
             cache_buffer_size : int = 307200, overwrite : bool = False, 
             start_attempts: int = 3, sync_len: int = 10000) -> None:
@@ -276,8 +288,8 @@ class PersistentRedundantRadioStream(RedundantRadioStream):
                         overwrite=overwrite)
         self._filepath = filepath
 
-        super().__init__(redundancy=redundancy, byte_buffer=byteBuffer, 
-            cache_buffer_size=cache_buffer_size, 
+        super().__init__(page_url=page_url, redundancy=redundancy, 
+            byte_buffer=byteBuffer, cache_buffer_size=cache_buffer_size, 
             start_attempts=start_attempts, sync_len=sync_len)
     
     @property

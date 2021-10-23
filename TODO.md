@@ -1,4 +1,6 @@
+- [ ] Build CLI
 - [ ] Write unit tests:
+    - [ ] ...for URL parameters in all the different RadioStream-related classes
     - [ ] ...for RSM failing over to the longest stream.
     - [ ] ...for starting and stopping recording on PersistentByteBuffer
     - [ ] ...for starting and stopping recording on PRRS
@@ -9,7 +11,6 @@
     - Make sure all test functions are annotated as returning None
     - Combine related tests in test_byte_buffer into a class, instead of giving each case its own class
 - [ ] Clean up and better standardize quote usage
-- [ ] Build CLI
 - [ ] Document!!
 - [x] Build in functionality to the PersistentByteBuffer and PRRS to start and stop writing data to disk.
 - [x] Build in functionality to PersistentByteBuffer and PRRS to dump everything to disk

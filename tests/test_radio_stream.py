@@ -9,26 +9,28 @@ from app.radio_stream import PersistentRedundantRadioStream, RadioStream, \
                                 RadioStreamManager, RedundantRadioStream
 
 class TestRadioStreamCreation(TestCase):
+    _page_url : str = "https://player.listenlive.co/34461"
     _dummyURL : str = "https://kennethstebbins.com"
 
     def test_init(self):
-        rs = RadioStream()
+        rs = RadioStream(self._page_url)
 
         self.assertIsInstance(rs, RadioStream)
-        self.assertIsNotNone(rs._url)
+        self.assertIsNotNone(rs._stream_url)
     
-    def test_url(self):
+    def test_stream_url(self):
         expected = self._dummyURL
 
-        rs = RadioStream(url=expected)
+        rs = RadioStream(self._page_url, stream_url=expected)
 
         self.assertIsInstance(rs, RadioStream)
-        self.assertEqual(rs._url, expected)
+        self.assertEqual(rs._stream_url, expected)
 
     def test_buffer_size(self):
         expected = 1000
 
-        rs = RadioStream(buffer_size=expected, url=self._dummyURL)
+        rs = RadioStream(self._page_url, buffer_size=expected, 
+                stream_url=self._dummyURL)
 
         self.assertIsInstance(rs, RadioStream)
         self.assertEqual(rs._byte_buffer.length, expected)
@@ -36,30 +38,33 @@ class TestRadioStreamCreation(TestCase):
     def test_preroll_len(self):
         expected = 1000
 
-        rs = RadioStream(preroll_len=expected, url=self._dummyURL)
+        rs = RadioStream(self._page_url, preroll_len=expected, 
+                stream_url=self._dummyURL)
 
         self.assertIsInstance(rs, RadioStream)
         self.assertEqual(rs._preroll_len, expected)
 
 class TestRadioStreamProperties(TestCase):
+    _page_url : str = "https://player.listenlive.co/34461"
     _dummyURL : str = "https://kennethstebbins.com"
     _rs : RadioStream = None
 
     def setUp(self) -> None:
-        self._rs = RadioStream(url=self._dummyURL)
+        self._rs = RadioStream(self._page_url, stream_url=self._dummyURL)
     
     def test_byte_buffer(self):
         self.assertEqual(self._rs.byte_buffer, self._rs._byte_buffer)
     
     def test_url(self):
-        self.assertEqual(self._rs.url, self._rs._url)
+        self.assertEqual(self._rs.stream_url, self._rs._stream_url)
 
 class TestRadioStreamStartAndStop(TestCase):
+    _page_url : str = "https://player.listenlive.co/34461"
     _rs : RadioStream = None
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls._rs = RadioStream()
+        cls._rs = RadioStream(cls._page_url)
 
     def test_0_start(self):
         e = Event()
@@ -71,7 +76,7 @@ class TestRadioStreamStartAndStop(TestCase):
         firstLen = self._rs.byte_buffer.readable_length
         self.assertGreater(firstLen, 0)
 
-        e.wait(1)
+        e.wait(3)
 
         secondLen = self._rs.byte_buffer.readable_length
         self.assertGreater(secondLen, firstLen)
@@ -86,22 +91,24 @@ class TestRadioStreamStartAndStop(TestCase):
         self.assertFalse(self._rs.is_alive())
 
 class TestRadioStreamManagerCreation(TestCase):
+    _page_url : str = "https://player.listenlive.co/34461"
+
     def test_init(self):
-        rsm = RadioStreamManager()
+        rsm = RadioStreamManager(self._page_url)
 
         self.assertIsInstance(rsm, RadioStreamManager)
 
     def test_redundancy(self):
         expected = 5
 
-        rsm = RadioStreamManager(redundancy=expected)
+        rsm = RadioStreamManager(self._page_url, redundancy=expected)
 
         self.assertIsInstance(rsm, RadioStreamManager)
         self.assertEqual(rsm._desired_redundancy, expected)
 
     def test_zero_redundancy(self):
         with self.assertRaises(ValueError) as cm:
-            RadioStreamManager(redundancy=0)
+            RadioStreamManager(self._page_url, redundancy=0)
 
         self.assertEqual(cm.exception.args[0], 
             'Cannot have a redundancy less than 1')
@@ -109,7 +116,7 @@ class TestRadioStreamManagerCreation(TestCase):
     def test_buffer_size(self):
         expected = 1000
 
-        rsm = RadioStreamManager(buffer_size=expected)
+        rsm = RadioStreamManager(self._page_url, buffer_size=expected)
 
         self.assertIsInstance(rsm, RadioStreamManager)
         self.assertEqual(rsm._desired_buffer_size, expected)
@@ -117,7 +124,7 @@ class TestRadioStreamManagerCreation(TestCase):
     def test_start_attempts(self):
         expected = 5
 
-        rsm = RadioStreamManager(start_attempts=expected)
+        rsm = RadioStreamManager(self._page_url, start_attempts=expected)
 
         self.assertIsInstance(rsm, RadioStreamManager)
         self.assertEqual(rsm._stream_start_attempts, expected)
@@ -126,23 +133,24 @@ class TestRadioStreamManagerCreation(TestCase):
         def handle_failover(old : RadioStream, new : RadioStream) -> None:
             self.fail("This handler should not have been called")
         
-        rsm = RadioStreamManager(on_stream_failover=handle_failover)
+        rsm = RadioStreamManager(self._page_url, on_stream_failover=handle_failover)
 
         self.assertIn(handle_failover, rsm._stream_failover_handlers)
     
     def test_on_stream_failover_followup(self):
         expected = 0
 
-        rsm = RadioStreamManager()
+        rsm = RadioStreamManager(self._page_url)
 
         self.assertEqual(len(rsm._stream_failover_handlers), expected)
 
 class TestRadioStreamManagerFailoverHandlers(TestCase):
+    _page_url : str = "https://player.listenlive.co/34461"
     _rsm : RadioStreamManager = None
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls._rsm = RadioStreamManager()
+        cls._rsm = RadioStreamManager(cls._page_url)
 
     def _handle_failover(self, old : RadioStream, new : RadioStream) -> None:
         self.fail("This handler should not have been called")
@@ -162,12 +170,14 @@ class TestRadioStreamManagerFailoverHandlers(TestCase):
         self.assertEqual(len(rsm._stream_failover_handlers), 0)
 
 class TestRadioStreamManagerStartAndFailover(TestCase):
+    _page_url : str = "https://player.listenlive.co/34461"
     _rsm : RadioStreamManager = None
     _redundancy : int = 2
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls._rsm = RadioStreamManager(redundancy=cls._redundancy)
+        cls._rsm = RadioStreamManager(cls._page_url, 
+                    redundancy=cls._redundancy)
 
     def test_0_start(self):
         rsm = self._rsm
@@ -242,8 +252,10 @@ class TestRadioStreamManagerStartAndFailover(TestCase):
             self.assertNotIn(stream, oldStreams)
 
 class TestRedundantRadioStreamCreationAndProperties(TestCase):
+    _page_url : str = "https://player.listenlive.co/34461"
+
     def test_init(self) -> None:
-        rrs = RedundantRadioStream()
+        rrs = RedundantRadioStream(self._page_url)
 
         self.assertIsInstance(rrs, RedundantRadioStream)
         self.assertIsInstance(rrs.byte_buffer, ByteBuffer)
@@ -252,21 +264,21 @@ class TestRedundantRadioStreamCreationAndProperties(TestCase):
     def test_init_redundancy(self) -> None:
         expected = 5
 
-        rrs = RedundantRadioStream(redundancy=expected)
+        rrs = RedundantRadioStream(self._page_url, redundancy=expected)
 
         self.assertEqual(rrs._radio_stream_manager._desired_redundancy, expected)
     
     def test_init_redundant_buffer_size(self) -> None:
         expected = 38271
 
-        rrs = RedundantRadioStream(redundant_buffer_size=expected)
+        rrs = RedundantRadioStream(self._page_url, redundant_buffer_size=expected)
 
         self.assertEqual(rrs._byte_buffer.length, expected)
     
     def test_init_cache_buffer_size(self) -> None:
         expected = 39201
 
-        rrs = RedundantRadioStream(cache_buffer_size=expected)
+        rrs = RedundantRadioStream(self._page_url, cache_buffer_size=expected)
 
         self.assertEqual(rrs._radio_stream_manager._desired_buffer_size, 
             expected)
@@ -274,27 +286,27 @@ class TestRedundantRadioStreamCreationAndProperties(TestCase):
     def test_init_start_attempts(self) -> None:
         expected = 5
 
-        rrs = RedundantRadioStream(start_attempts=expected)
+        rrs = RedundantRadioStream(self._page_url, start_attempts=expected)
 
         self.assertEqual(rrs._radio_stream_manager._stream_start_attempts, expected)
     
     def test_init_sync_len(self) -> None:
         expected = 3824
 
-        rrs = RedundantRadioStream(sync_len=expected)
+        rrs = RedundantRadioStream(self._page_url, sync_len=expected)
 
         self.assertEqual(rrs._sync_len, expected)
     
     def test_init_byte_buffer(self) -> None:
         bb = ByteBuffer(17659)
 
-        rrs = RedundantRadioStream(byte_buffer=bb)
+        rrs = RedundantRadioStream(self._page_url, byte_buffer=bb)
 
         self.assertEqual(rrs.byte_buffer, bb)
     
     def test_init_undersized_redundant_buffer(self) -> None:
         with self.assertRaises(ValueError) as cm:
-            rrs = RedundantRadioStream(redundant_buffer_size=100, 
+            rrs = RedundantRadioStream(self._page_url, redundant_buffer_size=100, 
                     sync_len=1000)
 
         self.assertEqual(cm.exception.args[0], 
@@ -303,7 +315,7 @@ class TestRedundantRadioStreamCreationAndProperties(TestCase):
     
     def test_init_undersized_cache_buffer(self) -> None:
         with self.assertRaises(ValueError) as cm:
-            rrs = RedundantRadioStream(cache_buffer_size=100, 
+            rrs = RedundantRadioStream(self._page_url, cache_buffer_size=100, 
                     sync_len=1000)
 
         self.assertEqual(cm.exception.args[0], 
@@ -311,16 +323,17 @@ class TestRedundantRadioStreamCreationAndProperties(TestCase):
             'cache buffer lengths')
     
     def test_property_byte_buffer(self) -> None:
-        rrs = RedundantRadioStream()
+        rrs = RedundantRadioStream(self._page_url)
 
         self.assertEqual(rrs._byte_buffer, rrs.byte_buffer)
 
 class TestRedundantRadioStreamFunctions(TestCase):
+    _page_url : str = "https://player.listenlive.co/34461"
     _rrs : RedundantRadioStream = None
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls._rrs = RedundantRadioStream()
+        cls._rrs = RedundantRadioStream(cls._page_url)
 
     def test_0_start(self) -> None:
         rrs = self._rrs
@@ -342,7 +355,7 @@ class TestRedundantRadioStreamFunctions(TestCase):
         rsm = rrs._radio_stream_manager
         e = Event()
 
-        reference = RadioStream()
+        reference = RadioStream(self._page_url)
         reference.start()
 
         e.wait(30)
@@ -376,6 +389,7 @@ class TestRedundantRadioStreamFunctions(TestCase):
 
 
 class TestPersistentRedundantRadioStreamCreation(TestCase):
+    _page_url : str = "https://player.listenlive.co/34461"
     _filepath = './tests/output/prrs.aac'
 
     def tearDown(self) -> None:
@@ -386,7 +400,7 @@ class TestPersistentRedundantRadioStreamCreation(TestCase):
         if os.path.isfile(self._filepath):
             os.remove(self._filepath)
 
-        prrs = PersistentRedundantRadioStream(self._filepath)
+        prrs = PersistentRedundantRadioStream(self._filepath, self._page_url)
 
         self.assertIsInstance(prrs, PersistentRedundantRadioStream)
         self.assertIsInstance(prrs.byte_buffer, PersistentByteBuffer)
@@ -396,7 +410,7 @@ class TestPersistentRedundantRadioStreamCreation(TestCase):
         with open(self._filepath, 'w') as f:
             f.write('Some content!!')
 
-        prrs = PersistentRedundantRadioStream(self._filepath, overwrite=True)
+        prrs = PersistentRedundantRadioStream(self._filepath, self._page_url, overwrite=True)
 
         self.assertIsInstance(prrs, PersistentRedundantRadioStream)
         self.assertIsInstance(prrs.byte_buffer, PersistentByteBuffer)
@@ -409,7 +423,7 @@ class TestPersistentRedundantRadioStreamCreation(TestCase):
         expected = 5
 
         prrs = PersistentRedundantRadioStream(self._filepath, 
-                redundancy=expected)
+                self._page_url, redundancy=expected)
 
         self.assertEqual(prrs._radio_stream_manager._desired_redundancy, 
             expected)
@@ -418,7 +432,7 @@ class TestPersistentRedundantRadioStreamCreation(TestCase):
         expected = 38271
 
         prrs = PersistentRedundantRadioStream(self._filepath, 
-                persistent_buffer_size=expected)
+                self._page_url, persistent_buffer_size=expected)
 
         self.assertEqual(prrs._byte_buffer.length, expected)
     
@@ -426,7 +440,7 @@ class TestPersistentRedundantRadioStreamCreation(TestCase):
         expected = 39201
 
         prrs = PersistentRedundantRadioStream(self._filepath, 
-                cache_buffer_size=expected)
+                self._page_url, cache_buffer_size=expected)
 
         self.assertEqual(prrs._radio_stream_manager._desired_buffer_size, 
             expected)
@@ -435,7 +449,7 @@ class TestPersistentRedundantRadioStreamCreation(TestCase):
         expected = 5
 
         rrs = PersistentRedundantRadioStream(self._filepath, 
-                start_attempts=expected)
+                self._page_url, start_attempts=expected)
 
         self.assertEqual(rrs._radio_stream_manager._stream_start_attempts, expected)
     
@@ -443,17 +457,19 @@ class TestPersistentRedundantRadioStreamCreation(TestCase):
         expected = 3824
 
         rrs = PersistentRedundantRadioStream(self._filepath, 
-                sync_len=expected)
+                self._page_url, sync_len=expected)
 
         self.assertEqual(rrs._sync_len, expected)
 
 class TestPersistentRedundantRadioStream(TestCase):
+    _page_url : str = "https://player.listenlive.co/34461"
     _filepath = './tests/output/prrs.aac'
 
     def test_start(self) -> None:
         e = Event()
 
-        prrs = PersistentRedundantRadioStream(self._filepath, overwrite=True)
+        prrs = PersistentRedundantRadioStream(self._filepath, self._page_url, 
+                overwrite=True)
 
         with open(self._filepath, 'rb') as f:
             self.assertEqual(f.read(), b'')
@@ -478,4 +494,4 @@ class TestPersistentRedundantRadioStream(TestCase):
 #     return suite
 
 if __name__ == '__main__':
-    start_test()
+    start_test(failfast=False)
