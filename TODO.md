@@ -1,6 +1,7 @@
 - [ ] Build CLI
 - [ ] Write unit tests:
     - [ ] ...for URL parameters in all the different RadioStream-related classes
+    - [ ] ...for changing the filepath of a PBB after it has been created
     - [ ] ...for RSM failing over to the longest stream.
     - [ ] ...for starting and stopping recording on PersistentByteBuffer
     - [ ] ...for starting and stopping recording on PRRS
