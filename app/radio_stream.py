@@ -279,11 +279,12 @@ class PersistentRedundantRadioStream(RedundantRadioStream):
     def __init__(self, filepath : str, page_url : str, redundancy: int = 2, 
             persistent_buffer_size: int = 50000, 
             cache_buffer_size : int = 307200, overwrite : bool = False, 
-            start_attempts: int = 3, sync_len: int = 10000) -> None:
+            should_write : bool = True, start_attempts: int = 3, 
+            sync_len: int = 10000) -> None:
         
         byteBuffer = PersistentByteBuffer(filepath, 
                         length=persistent_buffer_size, 
-                        overwrite=overwrite)
+                        overwrite=overwrite, should_write=should_write)
         self._filepath = filepath
 
         super().__init__(page_url=page_url, redundancy=redundancy, 
