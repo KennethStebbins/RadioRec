@@ -1424,7 +1424,7 @@ class TestPersistentByteBufferCreation(unittest.TestCase):
             f.write('This is some content!')
 
         try:
-            with self.assertRaises(ValueError) as cm:
+            with self.assertRaises(FileExistsError) as cm:
                 pbb = PersistentByteBuffer(testFilePath)
 
             self.assertEqual(cm.exception.args[0], 

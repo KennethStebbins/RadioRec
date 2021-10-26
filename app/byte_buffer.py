@@ -395,7 +395,7 @@ class PersistentByteBuffer(ByteBuffer):
             if overwrite:
                 os.remove(self._filepath)
             else:
-                raise ValueError(f"A file already exists at {self._filepath}")
+                raise FileExistsError(f"A file already exists at {self._filepath}")
         
         # Create the file, also testing whether we can write there at all
         Path(self._filepath).touch()
