@@ -118,6 +118,10 @@ def main() -> None:
 
     log = _prepLogger(args.log_file)
 
+    if args.verbose:
+        log.setLevel(logging.DEBUG)
+        log.debug("Verbose logging enabled")
+
     if args.start_date:
         try:
             startDate = datetime.strptime(args.start_date, DATETIME_PARSE_FORMAT)
