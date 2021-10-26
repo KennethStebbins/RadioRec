@@ -414,11 +414,11 @@ class PersistentByteBuffer(ByteBuffer):
     
     @property
     def should_write(self) -> bool:
-        return self.should_write
+        return self._should_write
     
     @should_write.setter
     def should_write(self, value : bool) -> None:
-        self.should_write = value
+        self._should_write = value
         
     def _writeToFile(self, b : bytes) -> None:
         if not self._should_write:
