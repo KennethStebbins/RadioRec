@@ -175,7 +175,7 @@ def main() -> None:
     try:
         log.info("Recording started")
         if args.end_date:
-            log.info("Recoding will end at " + 
+            log.info("Recording will end at " + 
                 f"{endDate.strftime(DATETIME_CONSOLE_FORMAT)}")
         while not args.end_date or endHour > datetime.now():
             record_hour(prrs, args.output_dir)
@@ -187,7 +187,7 @@ def main() -> None:
     finally:
         prrs.writeAll()
         prrs.should_write = False
-        log.info("Recroding finished")
+        log.info("Recording finished")
     
 
 if __name__ == '__main__':
