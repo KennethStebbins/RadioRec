@@ -126,16 +126,19 @@ def main() -> None:
         try:
             startDate = datetime.strptime(args.start_date, DATETIME_PARSE_FORMAT)
         except ValueError as e:
-            log.critical(f"Failed to parse start date: {args.start_date}")
-            raise ValueError("Unable to parse given start date") from e
+            log.error(f"Failed to parse start date: {args.start_date}")
+            log.info("Dates must be provided in this format: YYYY-MM-DD HH:MM:SS")
+            exit(1)
+            
 
     if args.end_date:
         try:
             endDate = datetime.strptime(args.end_date, DATETIME_PARSE_FORMAT)
             endHour = endDate.replace(minute=0, second=0, microsecond=0)
         except ValueError as e:
-            log.critical(f"Failed to parse end date: {args.end_date}")
-            raise ValueError("Unable to parse given end date") from e
+            log.error(f"Failed to parse end date: {args.end_date}")
+            log.info("Dates must be provided in this format: YYYY-MM-DD HH:MM:SS")
+            exit(1)
 
     try:
         os.makedirs(args.output_dir, exist_ok=True)
