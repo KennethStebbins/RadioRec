@@ -7,6 +7,7 @@ from app.byte_buffer import ByteBuffer, PersistentByteBuffer
 
 DATETIME_PARSE_FORMAT : str = r'%Y-%m-%d %H:%M:%S'
 DATETIME_FILE_FORMAT : str = r'%Y-%m-%d_%H%M'
+DATETIME_CONSOLE_FORMAT : str = r'%A, %B $d at %H:%M:%S %p'
 
 log = logging.getLogger('RadioRec')
 
@@ -166,11 +167,16 @@ def main() -> None:
     log.debug("PRRS started")
 
     if args.start_date:
+        log.info("Waiting for start date: " + 
+            f"{startDate.strftime(DATETIME_CONSOLE_FORMAT)}")
         wait_until(startDate)
         prrs.byte_buffer.seekToEnd()
 
     try:
         log.info("Recording started")
+        if args.end_date:
+            log.info("Recoding will end at " + 
+                f"{endDate.strftime(DATETIME_CONSOLE_FORMAT)}")
         while not args.end_date or endHour > datetime.now():
             record_hour(prrs, args.output_dir)
         
