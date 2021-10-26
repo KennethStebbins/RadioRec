@@ -137,6 +137,13 @@ def main() -> None:
             log.critical(f"Failed to parse end date: {args.end_date}")
             raise ValueError("Unable to parse given end date") from e
 
+    try:
+        os.makedirs(args.output_dir, exist_ok=True)
+    except Exception as e:
+        log.exception("Failed to create the output directory " + 
+            f"at {args.output_dir}")
+        exit(1)
+
     outputFilePath = os.path.join(args.output_dir, 'output.aac')
     try:
         log.debug("About to instantiate PRRS...")
@@ -158,6 +165,7 @@ def main() -> None:
         prrs.byte_buffer.seekToEnd()
 
     try:
+        log.info("Recording started")
         while not args.end_date or endHour > datetime.now():
             record_hour(prrs, args.output_dir)
         
@@ -168,6 +176,7 @@ def main() -> None:
     finally:
         prrs.writeAll()
         prrs.should_write = False
+        log.info("Recroding finished")
     
 
 if __name__ == '__main__':
