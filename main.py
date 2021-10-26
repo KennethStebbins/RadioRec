@@ -109,6 +109,8 @@ def record_until(prrs : PersistentRedundantRadioStream,
 
     wait_until(endDate)
 
+    prrs.writeAll()
+
 def record_hour(prrs : PersistentRedundantRadioStream, 
         output_dir : str) -> str:
     endDate = datetime.now() + timedelta(hours=1)
