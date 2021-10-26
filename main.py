@@ -128,6 +128,7 @@ def main() -> None:
     if args.end_date:
         try:
             endDate = datetime.strptime(args.end_date, DATETIME_PARSE_FORMAT)
+            endHour = endDate.replace(minute=0, second=0, microsecond=0)
         except ValueError as e:
             log.critical(f"Failed to parse end date: {args.end_date}")
             raise ValueError("Unable to parse given end date") from e
@@ -143,15 +144,16 @@ def main() -> None:
         wait_until(startDate)
         prrs.byte_buffer.seekToEnd()
 
-    endHour = endDate.replace(minute=0, second=0, microsecond=0)
-    while not args.end_date or endHour > datetime.now():
-        record_hour(prrs, args.output_dir)
+    try:
+        while not args.end_date or endHour > datetime.now():
+            record_hour(prrs, args.output_dir)
+        
+        if args.end_date and endDate > endHour:
+            record_until(prrs, args.output_dir, endDate)
+    finally:
+        prrs.writeAll()
+        prrs.should_write = False
     
-    if endDate > endHour:
-        record_until(prrs, args.output_dir, endDate)
-    
-    prrs.writeAll()
-    prrs.should_write = False
 
 if __name__ == '__main__':
     main()
