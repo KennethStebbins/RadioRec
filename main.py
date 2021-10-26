@@ -7,7 +7,7 @@ from app.byte_buffer import ByteBuffer, PersistentByteBuffer
 
 DATETIME_PARSE_FORMAT : str = r'%Y-%m-%d %H:%M:%S'
 DATETIME_FILE_FORMAT : str = r'%Y-%m-%d_%H%M'
-DATETIME_CONSOLE_FORMAT : str = r'%A, %B $d at %H:%M:%S %p'
+DATETIME_CONSOLE_FORMAT : str = r'%A, %B %d at %H:%M:%S %p'
 
 log = logging.getLogger('RadioRec')
 
