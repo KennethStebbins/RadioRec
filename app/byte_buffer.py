@@ -399,6 +399,7 @@ class PersistentByteBuffer(ByteBuffer):
         
         # Create the file, also testing whether we can write there at all
         Path(self._filepath).touch()
+        os.remove(self._filepath)
 
         super().__init__(length=length)
     
