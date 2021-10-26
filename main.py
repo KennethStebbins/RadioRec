@@ -46,6 +46,8 @@ def _prepLogger(filepath : str = None) -> logging.Logger:
         fileHandler.setLevel(logging.DEBUG)
         log.addHandler(fileHandler)
 
+    log.setLevel(logging.INFO)
+
     return log
 
 def _parseArgs() -> argparse.Namespace:
