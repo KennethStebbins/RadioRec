@@ -133,12 +133,21 @@ def main() -> None:
             log.critical(f"Failed to parse end date: {args.end_date}")
             raise ValueError("Unable to parse given end date") from e
 
-    log.debug("About to instantiate PRRS...")
-    prrs = PersistentRedundantRadioStream('output.aac', args.url,
-            redundancy=args.redundancy, overwrite=args.overwrite,
-            should_write=False)
+    outputFilePath = os.path.join(args.output_dir, 'output.aac')
+    try:
+        log.debug("About to instantiate PRRS...")
 
+        prrs = PersistentRedundantRadioStream(outputFilePath, args.url,
+                redundancy=args.redundancy, overwrite=args.overwrite,
+                should_write=False)
+    except FileExistsError:
+        pass
+
+    log.debug("PRRS instantiated.")
+
+    log.debug("Starting PRRS...")
     prrs.start()
+    log.debug("PRRS started")
 
     if args.start_date:
         wait_until(startDate)
@@ -150,10 +159,15 @@ def main() -> None:
         
         if args.end_date and endDate > endHour:
             record_until(prrs, args.output_dir, endDate)
+    except KeyboardInterrupt:
+        log.info("Stopping...")
     finally:
         prrs.writeAll()
         prrs.should_write = False
     
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
