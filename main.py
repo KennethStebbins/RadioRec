@@ -56,7 +56,7 @@ def _parseArgs() -> argparse.Namespace:
 
     ap.add_argument('-u', '--url', required=True,
         help="Stream URL to record")
-    ap.add_argument('-o', '--output-dir', required=True,
+    ap.add_argument('-o', '--output-dir', default='./output',
         help="Directory where recorded files should be placed")
     
     ap.add_argument('-s', '--start-date', default=None,
