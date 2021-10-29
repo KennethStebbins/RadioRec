@@ -6,11 +6,6 @@ cd ~
 apt update -y
 apt install curl tar bzip2 libgtk-3-0 libx11-xcb1 libdbus-glib-1-2 -y
 
-#curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-
-# Install dependencies for python cryptography library
-#apk add gcc musl-dev python3-dev libffi-dev openssl-dev cargo
-
 # Upgrade pip and install app's Python dependencies
 python -m pip install --upgrade pip
 pip install requests selenium
@@ -25,9 +20,5 @@ ln -s /usr/local/lib/geckodriver/geckodriver /usr/local/bin
 curl -sL 'https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64&lang=en-US' | tar -xj
 mv firefox /usr/local/lib
 ln -s /usr/local/lib/firefox/firefox /usr/local/bin
-
-# Remove build dependencies
-#apk del gcc musl-dev python3-dev libffi-dev openssl-dev cargo
-#~/.cargo/bin/rustup self uninstall -y
 
 echo "Done!"
