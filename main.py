@@ -1,5 +1,5 @@
 import argparse, logging, os, sys
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from threading import Event
 
 from app.radio_stream import PersistentRedundantRadioStream
@@ -8,6 +8,8 @@ from app.byte_buffer import ByteBuffer, PersistentByteBuffer
 DATETIME_PARSE_FORMAT : str = r'%Y-%m-%d %H:%M:%S'
 DATETIME_FILE_FORMAT : str = r'%Y-%m-%d_%H%M'
 DATETIME_CONSOLE_FORMAT : str = r'%A, %B %d at %I:%M:%S %p'
+
+ONE_HOUR : timedelta = timedelta(hours=1)
 
 log = logging.getLogger('RadioRec')
 
@@ -177,7 +179,7 @@ def main() -> None:
         if args.end_date:
             log.info("Recording will end at " + 
                 f"{endDate.strftime(DATETIME_CONSOLE_FORMAT)}")
-        while not args.end_date or endHour > datetime.now():
+        while not args.end_date or endHour - datetime.now() > ONE_HOUR:
             record_hour(prrs, args.output_dir)
         
         if args.end_date and endDate > endHour:
@@ -188,7 +190,6 @@ def main() -> None:
         prrs.writeAll()
         prrs.should_write = False
         log.info("Recording finished")
-    
 
 if __name__ == '__main__':
     try:
