@@ -1,9 +1,9 @@
-FROM selenium/standalone-firefox
+FROM python:3.9.7-slim-bullseye
 
 WORKDIR /usr/local/radiorec
 
-COPY docker_prep_b.sh .
-RUN /bin/sh docker_prep_b.sh
+COPY docker_prep.sh .
+RUN /bin/sh docker_prep.sh
 
 COPY app app
 COPY main.py .
