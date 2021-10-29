@@ -4,7 +4,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.firefox.webelement import FirefoxWebElement
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 
@@ -64,9 +64,8 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headle
     try:
         opts = Options()
         opts.headless = headless
-        profile = FirefoxProfile()
-        profile.set_preference('media.volume_scale', '0.0')
-        browser = Firefox(options=opts, firefox_profile=profile)
+        opts.set_preference('media.volume_scale', '0.0')
+        browser = Firefox(options=opts)
     except:
         log.exception("Failed to initialize webdriver")
         raise RuntimeError('Failed to initialize webdriver')
@@ -78,11 +77,11 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headle
         log.debug("Page loaded.")
 
         # Get all of our buttons
-        btnPlay : FirefoxWebElement = WebDriverWait(browser, 10).until(
+        btnPlay : WebElement = WebDriverWait(browser, 10).until(
             expected_conditions.presence_of_element_located(btnPlaySelector)
         )
 
-        btnStop : FirefoxWebElement = WebDriverWait(browser, 10).until(
+        btnStop : WebElement = WebDriverWait(browser, 10).until(
             expected_conditions.presence_of_element_located(btnStopSelector)
         )
         log.debug("Buttons found")
