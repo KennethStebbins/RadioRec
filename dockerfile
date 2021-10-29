@@ -1,4 +1,4 @@
-FROM selenium/standalone-firefox:4.0.0
+FROM selenium/standalone-firefox
 
 WORKDIR /usr/local/radiorec
 
