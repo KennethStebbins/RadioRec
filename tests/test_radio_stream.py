@@ -404,7 +404,6 @@ class TestPersistentRedundantRadioStreamCreation(TestCase):
 
         self.assertIsInstance(prrs, PersistentRedundantRadioStream)
         self.assertIsInstance(prrs.byte_buffer, PersistentByteBuffer)
-        self.assertTrue(os.path.isfile(self._filepath))
 
     def test_init_override(self) -> None:
         with open(self._filepath, 'w') as f:
@@ -414,7 +413,6 @@ class TestPersistentRedundantRadioStreamCreation(TestCase):
 
         self.assertIsInstance(prrs, PersistentRedundantRadioStream)
         self.assertIsInstance(prrs.byte_buffer, PersistentByteBuffer)
-        self.assertTrue(os.path.isfile(self._filepath))
 
         with open(self._filepath, 'r') as f:
             self.assertEqual(f.read(), '')
@@ -471,8 +469,7 @@ class TestPersistentRedundantRadioStream(TestCase):
         prrs = PersistentRedundantRadioStream(self._filepath, self._page_url, 
                 overwrite=True)
 
-        with open(self._filepath, 'rb') as f:
-            self.assertEqual(f.read(), b'')
+        self.assertFalse(os.path.exists(self._filepath))
         
         prrs.start()
 

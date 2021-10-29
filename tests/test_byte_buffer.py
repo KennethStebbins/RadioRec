@@ -1397,9 +1397,6 @@ class TestPersistentByteBufferCreation(unittest.TestCase):
         pbb = PersistentByteBuffer(testFilePath)
 
         self.assertIsInstance(pbb, PersistentByteBuffer)
-        self.assertTrue(os.path.isfile(testFilePath))
-
-        os.remove(testFilePath)
 
     def test_init_overwrite(self) -> None:
         testFilePath : str = './tests/output/pbb_test_init_overwrite'
@@ -1410,13 +1407,9 @@ class TestPersistentByteBufferCreation(unittest.TestCase):
         pbb = PersistentByteBuffer(testFilePath, overwrite=True)
 
         self.assertIsInstance(pbb, PersistentByteBuffer)
-        self.assertTrue(os.path.isfile(testFilePath))
 
-        with open(testFilePath, 'r') as f:
-            self.assertEqual(f.read(), '')
-
-        os.remove(testFilePath)
-    
+        self.assertFalse(os.path.exists(testFilePath))
+        
     def test_init_no_overwrite(self) -> None:
         testFilePath : str = './tests/output/pbb_test_init_no_overwrite'
 
@@ -1434,16 +1427,17 @@ class TestPersistentByteBufferCreation(unittest.TestCase):
 
 class TestPersistentByteBufferFunctions(unittest.TestCase):
     _pbb : PersistentByteBuffer = None
+    _filepath : str = './tests/output/pbb_test_functions'
 
     def setUp(self) -> None:
-        filepath = './tests/output/pbb_test_functions'
-        if os.path.isfile(filepath):
-            os.remove(filepath)
+        if os.path.isfile(self._filepath):
+            os.remove(self._filepath)
 
-        self._pbb = PersistentByteBuffer(filepath, 10)
+        self._pbb = PersistentByteBuffer(self._filepath, 10)
     
     def tearDown(self) -> None:
-        os.remove(self._pbb._filepath)
+        if os.path.isfile(self._filepath):
+            os.remove(self._filepath)
 
     def test_filepath_property(self) -> None:
         self.assertEqual(self._pbb._filepath, self._pbb.filepath)
@@ -1451,8 +1445,7 @@ class TestPersistentByteBufferFunctions(unittest.TestCase):
     def test_no_overflow_write(self) -> None:
         self._pbb.append(b'test!')
 
-        with open(self._pbb.filepath, 'rb') as f:
-            self.assertSequenceEqual(f.read(), b'')
+        self.assertFalse(os.path.exists(self._filepath))
     
     def test_overflow_write(self) -> None:
         self._pbb.append(b'Ruby Rose!')
