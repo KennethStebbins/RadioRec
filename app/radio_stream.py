@@ -67,7 +67,7 @@ class RadioStream(Thread):
                 self._byte_buffer.append(self._http_stream.read(8192))
     
     def stop(self) -> None:
-        if not self._http_stream.closed:
+        if self._http_stream is not None and not self._http_stream.closed:
             self._http_stream.close()
 
     def __del__(self):
