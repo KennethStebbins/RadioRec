@@ -10,6 +10,6 @@ python3 -m pip install --upgrade pip
 pip3 install requests selenium
 
 sudo mkdir /usr/local/radiorec/output
-sudo chmod 777 /usr/local/radiorec/output
+sudo chown -R seluser:seluser /usr/local/radiorec/output
 
 echo "Done!"
