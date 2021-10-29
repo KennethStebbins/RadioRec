@@ -4,15 +4,12 @@ Only tested on Ubuntu
 ## Dependencies
 ### Python modules
 - Python 3.9
-- PyAudio
-- PySoundFile
-- NumPy
-- Selenium
-- Python Requests
+- Selenium 4.0.0
+- Python Requests 2.26.0
 
 ### Other requirements
-- Mozilla geckodriver
-- Selenium
+- Mozilla geckodriver v0.30
+- Mozilla FireFox (latest)
 
 ### Install Dependencies
 ```bash
@@ -33,7 +30,7 @@ ln -s ~/.local/lib/firefox/firefox ~/.local/bin
 rm firefox.tar.bz2
 
 ## Install the other dependencies
-sudo apt install python3 python3-pip python3-pyaudio python3-soundfile -y
-sudo pip3 install soundfile numpy selenium requests
+sudo apt install python3 python3-pip -y
+sudo pip3 install selenium requests
 ```
 
