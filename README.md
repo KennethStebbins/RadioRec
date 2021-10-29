@@ -4,9 +4,6 @@ Only tested on Ubuntu
 ## Dependencies
 ### Python modules
 - Python 3.9
-- PyAudio
-- PySoundFile
-- NumPy
 - Selenium
 - Python Requests
 
