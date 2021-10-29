@@ -168,6 +168,10 @@ def main() -> None:
     prrs.start()
     log.debug("PRRS started")
 
+    if args.end_date:
+        log.info("Recording will end at " + 
+            f"{endDate.strftime(DATETIME_CONSOLE_FORMAT)}")
+
     if args.start_date:
         log.info("Waiting for start date: " + 
             f"{startDate.strftime(DATETIME_CONSOLE_FORMAT)}")
@@ -176,9 +180,6 @@ def main() -> None:
 
     try:
         log.info("Recording started")
-        if args.end_date:
-            log.info("Recording will end at " + 
-                f"{endDate.strftime(DATETIME_CONSOLE_FORMAT)}")
         while not args.end_date or endHour - datetime.now() > ONE_HOUR:
             record_hour(prrs, args.output_dir)
         
