@@ -1,4 +1,3 @@
-- [ ] Build CLI
 - [ ] Write unit tests:
     - [ ] ...for URL parameters in all the different RadioStream-related classes
     - [ ] ...for changing the filepath of a PBB after it has been created
@@ -14,6 +13,7 @@
     - Combine related tests in test_byte_buffer into a class, instead of giving each case its own class
 - [ ] Clean up and better standardize quote usage
 - [ ] Document!!
+- [x] Build CLI
 - [x] Build in functionality to the PersistentByteBuffer and PRRS to start and stop writing data to disk.
 - [x] Build in functionality to PersistentByteBuffer and PRRS to dump everything to disk
 - [x] Modify RadioStreamManager to select the stream with the largest buffer when failing over
