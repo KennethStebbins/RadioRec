@@ -9,25 +9,18 @@ Only tested on Ubuntu
 
 ### Other requirements
 - Mozilla geckodriver v0.30
-- Mozilla FireFox (latest)
+- Mozilla FireFox 93.0
 
 ### Install Dependencies
 ```bash
 ## Install geckodriver locally
-# Check https://github.com/mozilla/geckodriver/releases for the latest geckodriver linux64 release
-curl -L 'https://github.com/mozilla/geckodriver/releases/download/v0.29.1/geckodriver-v0.29.1-linux64.tar.gz' -o geckodriver.tar.gz
-tar -xzf geckodriver.tar.gz
+curl -L 'https://github.com/mozilla/geckodriver/releases/download/v0.30.0/geckodriver-v0.30.0-linux64.tar.gz' | tar -xz
 mv geckodriver ~/.local/bin
-# Clean up
-rm geckodriver.tar.gz
 
 ## Install Firefox locally
-curl -L 'https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64&lang=en-US' -o firefox.tar.bz2
-tar -xjf firefox.tar.bz2
-mv firefox .local/lib/
+curl -L 'https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64&lang=en-US' | tar -xj
+mv firefox/ ~/.local/lib/
 ln -s ~/.local/lib/firefox/firefox ~/.local/bin
-# Clean up
-rm firefox.tar.bz2
 
 ## Install the other dependencies
 sudo apt install python3 python3-pip -y
