@@ -12,7 +12,7 @@ from logging import getLogger
 
 log = getLogger('RadioRec')
 
-def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headless : bool = True) -> str:
+def get_stream_url(page_url : str, headless : bool = True) -> str:
     """
     Loads a player.listenlive.co webpage and extracts a raw streaming URL from it
 
