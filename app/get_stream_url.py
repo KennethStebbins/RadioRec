@@ -95,11 +95,15 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headle
 
         # Wait until it looks like the stream has started, then click the stop button
         log.debug("Waiting for stream to start...")
-        WebDriverWait(browser, 30).until(
-            stream_has_started
-        )
-        log.debug("Stream started! Clicking stop button...")
-        btnStop.click()
+        try:
+            WebDriverWait(browser, 30).until(
+                stream_has_started
+            )
+            log.debug("Stream started! Clicking stop button...")
+            btnStop.click()
+        except TimeoutException:
+            log.debug("It looks like the stream never started. " +
+                "We'll try to extract the stream URL anyway")
 
         # Wait until the streaming URL appears in the browser's performance metrics
         log.debug("Waiting for stream URL to appear in performance metrics...")
