@@ -9,7 +9,7 @@ from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 
 from logging import getLogger
 
-log = getLogger('radiorec')
+log = getLogger('RadioRec')
 
 def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headless : bool = True) -> str:
     """
