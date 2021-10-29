@@ -4,6 +4,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.firefox.webelement import FirefoxWebElement
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 
@@ -22,15 +23,6 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headle
     """
 
     log.debug('get_stream_url called')
-
-    def stream_has_started(driver):
-        ecAdBreakTextPresent = expected_conditions.text_to_be_present_in_element(adBreakTextSelector, 'In a commercial break...')
-        ecNowPlayingCardVisible = expected_conditions.visibility_of_element_located(nowPlayingCardSelector)
-
-        adBreakTextPresent = ecAdBreakTextPresent(driver)
-        nowPlayingCardVisible = ecNowPlayingCardVisible(driver)
-
-        return adBreakTextPresent or nowPlayingCardVisible
 
     def extract_streaming_url(driver):
         log.debug("extract_streaming_url() called")
@@ -77,11 +69,11 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headle
         log.debug("Page loaded.")
 
         # Get all of our buttons
-        btnPlay = WebDriverWait(browser, 10).until(
+        btnPlay : FirefoxWebElement = WebDriverWait(browser, 10).until(
             expected_conditions.presence_of_element_located(btnPlaySelector)
         )
 
-        btnStop = WebDriverWait(browser, 10).until(
+        btnStop : FirefoxWebElement = WebDriverWait(browser, 10).until(
             expected_conditions.presence_of_element_located(btnStopSelector)
         )
         log.debug("Buttons found")
@@ -93,21 +85,9 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headle
         log.debug("Play button is now clickable. Clicking...")
         btnPlay.click()
 
-        # Wait until it looks like the stream has started, then click the stop button
-        log.debug("Waiting for stream to start...")
-        try:
-            WebDriverWait(browser, 30).until(
-                stream_has_started
-            )
-            log.debug("Stream started! Clicking stop button...")
-            btnStop.click()
-        except TimeoutException:
-            log.debug("It looks like the stream never started. " +
-                "We'll try to extract the stream URL anyway")
-
         # Wait until the streaming URL appears in the browser's performance metrics
         log.debug("Waiting for stream URL to appear in performance metrics...")
-        WebDriverWait(browser, 10).until(
+        WebDriverWait(browser, 45).until(
             lambda driver : extract_streaming_url(driver) != ''
         )
         log.debug("Stream URL found!")
@@ -125,4 +105,5 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headle
         log.exception("An unexpected exception occurred while extracting the streaming URL")
         raise RuntimeError("Failed to extract streaming URL")
     finally:
+        btnStop.click()
         browser.close()
