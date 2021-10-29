@@ -1,13 +1,19 @@
 FROM python:3.9.7-slim-bullseye
 
-WORKDIR /usr/local/radiorec
+COPY docker_prep_root.sh .
+RUN /bin/bash docker_prep_root.sh
 
-COPY docker_prep.sh .
-RUN /bin/sh docker_prep.sh
+USER radiorec:radiorec
+WORKDIR /home/radiorec
+
+COPY docker_prep_user.sh .
+RUN /bin/bash docker_prep_user.sh
 
 COPY app app
 COPY main.py .
 COPY LICENSE .
 
-#ENTRYPOINT [ "/usr/bin/python3", "main.py" ]
-ENTRYPOINT [ "/bin/bash" ]
+ENV VIRTUAL_ENV="/home/radiorec/.pyvenv"
+ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+
+ENTRYPOINT [ "python", "main.py", "--output", "/output" ]
