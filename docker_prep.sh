@@ -4,7 +4,7 @@ cd ~
 
 #apk add curl tar
 apt update -y
-apt install curl tar bzip2 -y
+apt install curl tar bzip2 libgtk-3-0 libx11-xcb1 libdbus-glib-1-2 -y
 
 #curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 

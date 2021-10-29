@@ -4,6 +4,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 
@@ -63,9 +64,8 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headle
     try:
         opts = Options()
         opts.headless = headless
-        profile = FirefoxProfile()
-        profile.set_preference('media.volume_scale', '0.0')
-        browser = Firefox(options=opts, firefox_profile=profile)
+        opts.set_preference('media.volume_scale', '0.0')
+        browser = Firefox(options=opts)
     except:
         log.exception("Failed to initialize webdriver")
         raise RuntimeError('Failed to initialize webdriver')
@@ -77,11 +77,11 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headle
         log.debug("Page loaded.")
 
         # Get all of our buttons
-        btnPlay = WebDriverWait(browser, 10).until(
+        btnPlay : WebElement = WebDriverWait(browser, 10).until(
             expected_conditions.presence_of_element_located(btnPlaySelector)
         )
 
-        btnStop = WebDriverWait(browser, 10).until(
+        btnStop : WebElement = WebDriverWait(browser, 10).until(
             expected_conditions.presence_of_element_located(btnStopSelector)
         )
         log.debug("Buttons found")
@@ -93,17 +93,21 @@ def get_stream_url(page_url : str = 'https://player.listenlive.co/34461', headle
         log.debug("Play button is now clickable. Clicking...")
         btnPlay.click()
 
-        # Wait until it looks like the stream has started, then click the stop button
-        log.debug("Waiting for stream to start...")
+        # Wait to progress. If we find a streaming URL, continue. Otherwise,
+        # wait for the stream to start. When the stream starts, hit the stop
+        # button.
+        log.debug("Waiting for stream to start or streaming URL to appear...")
         WebDriverWait(browser, 30).until(
-            stream_has_started
+            lambda driver : stream_has_started(driver) or
+                                extract_streaming_url(driver) != ''
         )
-        log.debug("Stream started! Clicking stop button...")
-        btnStop.click()
+        if stream_has_started(browser):
+            log.debug("Stream has started! Pressing the stop button...")
+            btnStop.click()
 
         # Wait until the streaming URL appears in the browser's performance metrics
         log.debug("Waiting for stream URL to appear in performance metrics...")
-        WebDriverWait(browser, 10).until(
+        WebDriverWait(browser, 5).until(
             lambda driver : extract_streaming_url(driver) != ''
         )
         log.debug("Stream URL found!")
