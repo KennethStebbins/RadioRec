@@ -414,8 +414,7 @@ class TestPersistentRedundantRadioStreamCreation(TestCase):
         self.assertIsInstance(prrs, PersistentRedundantRadioStream)
         self.assertIsInstance(prrs.byte_buffer, PersistentByteBuffer)
 
-        with open(self._filepath, 'r') as f:
-            self.assertEqual(f.read(), '')
+        self.assertFalse(os.path.exists(self._filepath))
     
     def test_init_redundancy(self) -> None:
         expected = 5
