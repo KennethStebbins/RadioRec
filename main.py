@@ -140,6 +140,8 @@ def main() -> None:
         try:
             endDate = datetime.strptime(args.end_date, DATETIME_PARSE_FORMAT)
             endHour = endDate.replace(minute=0, second=0, microsecond=0)
+            log.debug(f"End date: {endDate.strftime(DATETIME_CONSOLE_FORMAT)}")
+            log.debug(f"End hour: {endHour.strftime(DATETIME_CONSOLE_FORMAT)}")
         except ValueError as e:
             log.error(f"Failed to parse end date: {args.end_date}")
             log.info("Dates must be provided in this format: YYYY-MM-DD HH:MM:SS")
@@ -183,7 +185,7 @@ def main() -> None:
         while not args.end_date or endHour - datetime.now() > ONE_HOUR:
             record_hour(prrs, args.output_dir)
         
-        if args.end_date and endDate > endHour:
+        if args.end_date and datetime.now() < endDate:
             record_until(prrs, args.output_dir, endDate)
     except KeyboardInterrupt:
         log.info("Stopping...")
