@@ -159,19 +159,13 @@ def main() -> None:
 
     outputFilePath = os.path.join(args.output_dir, 'output.aac')
     try:
-        log.debug("About to instantiate PRRS...")
-
         prrs = PersistentRedundantRadioStream(outputFilePath, args.url,
                 redundancy=args.redundancy, overwrite=args.overwrite,
                 should_write=False)
     except FileExistsError:
         pass
 
-    log.debug("PRRS instantiated.")
-
-    log.debug("Starting PRRS...")
     prrs.start()
-    log.debug("PRRS started")
 
     if args.end_date:
         log.info("Recording will end at " + 
@@ -186,9 +180,11 @@ def main() -> None:
     try:
         log.info("Recording started")
         while not args.end_date or endHour - datetime.now() > ONE_HOUR:
+            log.debug("Starting new hour interval")
             record_hour(prrs, args.output_dir)
         
         if args.end_date and datetime.now() < endDate:
+            log.debug("Recording straight until the end date.")
             record_until(prrs, args.output_dir, endDate)
     except KeyboardInterrupt:
         log.info("Stopping...")
