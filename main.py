@@ -47,6 +47,9 @@ def _prepLogger(filepath : str = None) -> logging.Logger:
     if filepath is not None:
         fileHandler = logging.FileHandler(filepath, 'a')
         fileHandler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(r"[%(asctime)s][%(module)s.%(funcName)s]" +
+                                        r"[T%(thread)d] %(message)s")
+        fileHandler.formatter = formatter
         log.addHandler(fileHandler)
 
     log.setLevel(logging.INFO)
