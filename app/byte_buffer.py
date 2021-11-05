@@ -38,58 +38,43 @@ class ByteBuffer:
         self._byte_array = bytearray(length)
         self._byte_array_lock = RLock()
         self._length = len(self._byte_array)
-        log.debug(f"ByteBuffer with length {self._length} created")
     
     def append(self, b : bytes) -> None:
-        log.debug(f"ByteBuffer.append() called")
         try:
-            log.debug("Acquiring byte array lock")
             self._byte_array_lock.acquire()
-            log.debug("Byte array lock acquired")
 
             b_len = len(b)
-            log.debug(f"Given bytes length: {b_len}")
             bi = 0
 
             if b_len > self._length:
                 # If the given bytes sequence is longer than our max length
                 bi = b_len - self._length
-            log.debug(f"bi is {bi}")
 
-            log.debug(f"Old readable length: {self._readable_length}")
             if b_len + self._readable_length > self._length:
                 self._setReadableLength(self._length)
             else:
                 self._setReadableLength(self._readable_length + b_len)
-            log.debug(f"New readable length {self._readable_length}")
 
             if b_len - bi + self._index > self._length:
-                log.debug(f"Will need to wrap")
                 # If we need to wrap around
                 first_pass_len = self._length - self._index
-                log.debug(f"First pass length: {first_pass_len}")
 
                 self._byte_array[self._index:] = b[bi:bi + first_pass_len]
-                log.debug("First pass bytes written")
 
                 self._index = 0
                 bi = bi + first_pass_len
             
             b_remaining = b_len - bi
-            log.debug(f"Bytes remaining: {b_remaining}")
             self._byte_array[self._index:self._index + b_remaining] = b[bi:]
-            log.debug("Remaining bytes written")
-
+            
             self._index = self._index + b_remaining
             if self._index == self._length:
                 self._index = 0
-            log.debug(f"New self index: {self._index}")
 
         except TypeError as e:
             raise ValueError("Value given for \"bytes\" is not a bytes-like object.") from e
         finally:
             self._byte_array_lock.release()
-            log.debug("Byte array lock released")
 
     def _getFirstReadIndex(self) -> int:
         with self._byte_array_lock:
@@ -177,19 +162,14 @@ class ByteBuffer:
                 return start >= firstReadIndex and stop <= lastReadIndex
 
     def _read(self, start : int, length : int, consume : bool = True) -> bytearray:
-        log.debug(f"ByteBuffer._read() called. start: {start}, length: {length}, consume: {consume}")      
         if length == 0:
-            log.debug("Requested read length was zero. Returning empty byte array.")
             return bytearray(b'')
         
         if not self._isWithinReadBounds(start, length):
             raise ValueError('Given start point and length are not within read bounds')
-        log.debug("Requested read parameters are within bounds")
 
         try:
-            log.debug("Acquiring write lock")
             self._byte_array_lock.acquire()
-            log.debug("Write lock acquired")
 
             readi = start
 
@@ -198,28 +178,22 @@ class ByteBuffer:
 
             if readi >= self._index:
                 # If we might need to wrap around
-                log.debug("We might need to wrap around")
                 first_pass_len = self._length - readi
                 if first_pass_len > length:
                     first_pass_len = length
-                log.debug(f"First pass length: {first_pass_len}")
 
                 response[responsei:first_pass_len] = self._byte_array[readi:]
-                log.debug("First pass bytes written")
 
                 responsei = responsei + first_pass_len
                 readi = 0
             
             response_remaining = length - responsei
-            log.debug(f"Response length remaining: {response_remaining}")
             response[responsei:] = self._byte_array[readi:readi + response_remaining]
 
             if consume:
-                log.debug("Consuming")
                 newReadingIndex = self._findStopIndex(start, length) + 1
                 if newReadingIndex == self._length:
                     newReadingIndex = 0
-                log.debug(f"New reading index: {newReadingIndex}")
                 if newReadingIndex == self._index:
                     self.seekToEnd()
                 else:
@@ -228,7 +202,6 @@ class ByteBuffer:
             return response
         finally:
             self._byte_array_lock.release()
-            log.debug("Write lock released")
 
     def read(self, length : int = -1, consume : bool = True) -> bytearray:        
         with self._byte_array_lock:
@@ -280,29 +253,21 @@ class ByteBuffer:
         self._setReadableLength(0)
 
     def _seekToIndex(self, index : int) -> None:
-        log.debug(f"ByteArray._seekToIndex() called. index: {index}")
         if index < 0:
             raise ValueError('Index cannot be zero')
         elif index >= self._length:
             raise ValueError('Index exceeds buffer length')
 
-        log.debug("Acquiring write and consume locks")
         with self._byte_array_lock:
-            log.debug("Byte array lock acquired")
             if not self._isWithinReadBounds(index, 1):
                 raise ValueError('Index is not within read bounds')
             elif index < self._index:
-                log.debug("Given index is less than the current index")
                 self._setReadableLength(self._index - index)
             else:
-                log.debug("Given index is greater than the current index")
                 self._setReadableLength(self._length - index + self._index)
-        log.debug("Write and consume locks released")
     
     def _findSequence(self, seq : bytes, match_len_step : int = 1000):
-        log.debug(f"ByteArray._findSequence called. match_len_step: {match_len_step}")
         seq_len = len(seq)
-        log.debug(f"Sequence length: {seq_len}")
         if seq_len == 0:
             raise ValueError('Sequence cannot be empty')
         elif seq_len > self._length:
@@ -311,15 +276,12 @@ class ByteBuffer:
         try:
             seq = bytearray(seq)
 
-            log.debug("Acquiring write lock")
             self._byte_array_lock.acquire()
-            log.debug("Write lock acquired")
             
             if seq_len > self._readable_length:
                 raise ValueError('Sequence is longer than readable length')
 
             firstReadi, lastReadi = self._getReadBounds()
-            log.debug(f"Read bounds: [{firstReadi},{lastReadi}]")
 
             if firstReadi < lastReadi:
                 possibleIndexes = range(firstReadi, lastReadi + 1)
@@ -329,14 +291,12 @@ class ByteBuffer:
             
             matchingIndex = -1
             for i in possibleIndexes:
-                log.debug(f"Evaluating starting index {i}")
                 isMatch = True
                 bestMatchLen = 0
                 while isMatch and bestMatchLen < seq_len:
                     matchLen = bestMatchLen + match_len_step
                     if matchLen > seq_len:
                         matchLen = seq_len
-                    log.debug(f"Current desired match length: {matchLen}")
 
                     if not self._isWithinReadBounds(i, matchLen):
                         # If the remaining untested data in the buffer is shorter
@@ -351,13 +311,10 @@ class ByteBuffer:
                     bestMatchLen = matchLen
 
                     if not isMatch:
-                        log.debug("Sequence did not match")
                         break
-                    log.debug(f"Sequence matches!")
                 
                 if isMatch:
                     matchingIndex = i
-                    log.debug(f"Match found at index {matchingIndex}")
                     break
             
             if matchingIndex < 0:
@@ -367,7 +324,6 @@ class ByteBuffer:
 
         finally:
             self._byte_array_lock.release()
-            log.debug("Byte array lock released")
 
     def seekToSequence(self, seq : bytes):
         with self._byte_array_lock:

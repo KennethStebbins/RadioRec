@@ -246,9 +246,7 @@ class RedundantRadioStream(Thread):
 
     def handleFailover(self, old_primary : RadioStream, new_primary : RadioStream) -> None:
         try:
-            log.debug("Acquiring write lock")
             self._write_lock.acquire()
-            log.debug("Write lock acquired")
 
             self.byte_buffer.append(
                 old_primary.byte_buffer.readUpToRemainingLength(
@@ -269,7 +267,6 @@ class RedundantRadioStream(Thread):
                     "result in a \"jump\" in the recording.")
             
         finally:
-            log.debug("Releasing write lock")
             self._write_lock.release()
 
     def stop(self) -> None:
