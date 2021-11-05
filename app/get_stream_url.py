@@ -22,8 +22,6 @@ def get_stream_url(page_url : str, headless : bool = True) -> str:
     asychronously.
     """
 
-    log.debug('get_stream_url called')
-
     def stream_has_started(driver):
         ecAdBreakTextPresent = expected_conditions.text_to_be_present_in_element(adBreakTextSelector, 'In a commercial break...')
         ecNowPlayingCardVisible = expected_conditions.visibility_of_element_located(nowPlayingCardSelector)
@@ -34,7 +32,6 @@ def get_stream_url(page_url : str, headless : bool = True) -> str:
         return adBreakTextPresent or nowPlayingCardVisible
 
     def extract_streaming_url(driver):
-        log.debug("extract_streaming_url() called")
         js = """
         let regex = /https?:\/\/\d+\.live\.streamtheworld\.com\/[^/]*\.aac/;
         let performanceEntries = window.performance.getEntries();
@@ -72,9 +69,7 @@ def get_stream_url(page_url : str, headless : bool = True) -> str:
 
     try:
         # Load the page
-        log.debug(f"Loading page at {page_url}...")
         browser.get(page_url)
-        log.debug("Page loaded.")
 
         # Get all of our buttons
         btnPlay : WebElement = WebDriverWait(browser, 10).until(
@@ -84,38 +79,30 @@ def get_stream_url(page_url : str, headless : bool = True) -> str:
         btnStop : WebElement = WebDriverWait(browser, 10).until(
             expected_conditions.presence_of_element_located(btnStopSelector)
         )
-        log.debug("Buttons found")
 
         # Make sure the play button is clickable, then click it
         WebDriverWait(browser, 10).until(
             expected_conditions.element_to_be_clickable(btnPlaySelector)
         )
-        log.debug("Play button is now clickable. Clicking...")
         btnPlay.click()
 
         # Wait to progress. If we find a streaming URL, continue. Otherwise,
         # wait for the stream to start. When the stream starts, hit the stop
         # button.
-        log.debug("Waiting for stream to start or streaming URL to appear...")
         WebDriverWait(browser, 30).until(
             lambda driver : stream_has_started(driver) or
                                 extract_streaming_url(driver) != ''
         )
         if stream_has_started(browser):
-            log.debug("Stream has started! Pressing the stop button...")
             btnStop.click()
 
         # Wait until the streaming URL appears in the browser's performance metrics
-        log.debug("Waiting for stream URL to appear in performance metrics...")
         WebDriverWait(browser, 5).until(
             lambda driver : extract_streaming_url(driver) != ''
         )
-        log.debug("Stream URL found!")
 
         # Grab the raw streaming url
         result = extract_streaming_url(browser)
-
-        log.debug(f"Found streaming URL: {result}")
 
         return result
     except TimeoutException as e:
