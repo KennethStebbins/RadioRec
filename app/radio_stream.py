@@ -127,6 +127,10 @@ class RadioStreamManager(Thread):
             # Start up new streams
             new_streams_needed = self._desired_redundancy - \
                                     len(self._redundant_radio_streams)
+
+            if new_streams_needed > 0:
+                log.debug(f"{new_streams_needed} redundant radio streams have failed.")
+
             for i in range(0, new_streams_needed):
                 self._redundant_radio_streams.append(self._start_new_stream())
 
@@ -146,6 +150,7 @@ class RadioStreamManager(Thread):
             if failover_stream is None:
                 # If all the redundant streams were dead, too, just
                 # make a new stream
+                log.warning("All radio streams have failed.")
                 failover_stream = self._start_new_stream()
             else:
                 self._redundant_radio_streams.remove(failover_stream)
@@ -165,6 +170,7 @@ class RadioStreamManager(Thread):
         while True:
             prs = self._primary_radio_stream
             if prs is None or not prs.is_alive():
+                log.debug(f"Primary stream failed. Replacing...")
                 self._replace_primary_stream()
             self._restore_redundancy()
             event.wait(.250)
