@@ -79,6 +79,9 @@ def _parseArgs() -> argparse.Namespace:
     ap.add_argument('--overwrite', action='store_true',
         help="If specified, the program won't hesitate before " + 
             "overwriting existing audio files in the output directory")
+    ap.add_argument('--refresh-streams-after', type=int, default=7200,
+        help="How often the redundant radio streams should be refreshed, " +
+            "in seconds.")
     
     return ap.parse_args()
 
@@ -161,7 +164,8 @@ def main() -> None:
     try:
         prrs = PersistentRedundantRadioStream(outputFilePath, args.url,
                 redundancy=args.redundancy, overwrite=args.overwrite,
-                should_write=False)
+                should_write=False, 
+                redundant_max_age_sec=args.refresh_streams_after)
     except FileExistsError:
         pass
 

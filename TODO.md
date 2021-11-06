@@ -7,6 +7,9 @@
     - [ ] ...for starting and stopping recording on PRRS
     - [ ] ...for writing everything to disk on PersistentByteBuffer
     - [ ] ...for writing everything to disk on PRRS
+    - [ ] ...for redundant_max_age_sec parameter in RSM, RRS, and PRRS
+    - [ ] ...for start_date in RadioStream
+    - [ ] ...for redundant_max_age_sec in RSM when redundancy < 2
 - [ ] ? Give PersistentRedundantRadioStream a better name.
 - [ ] Clean up and better standardize tests
     - Make sure all test functions are annotated as returning None

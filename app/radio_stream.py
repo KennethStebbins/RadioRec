@@ -1,11 +1,11 @@
-from argparse import ArgumentError
 import logging
 from os import devnull
 from requests import request
 from selenium.common.exceptions import TimeoutException
 from urllib3.response import HTTPResponse
 from threading import Event, RLock, Thread
-from typing import Callable, Iterable, List
+from typing import Callable, List
+from datetime import datetime, timedelta
 
 from app.get_stream_url import get_stream_url
 from app.byte_buffer import ByteBuffer, PersistentByteBuffer
@@ -17,6 +17,7 @@ class RadioStream(Thread):
     _stream_url : str = None
     _preroll_len : int = 63500
     _http_stream : HTTPResponse = None
+    _start_date: datetime = None
     
     @property
     def byte_buffer(self):
@@ -25,6 +26,10 @@ class RadioStream(Thread):
     @property
     def stream_url(self):
         return self._stream_url
+    
+    @property
+    def start_date(self):
+        return self._start_date
 
     def __init__(self, page_url : str = None, buffer_size : int = 307200, 
             attempts : int = 3, preroll_len : int = 63500,
@@ -39,6 +44,8 @@ class RadioStream(Thread):
             self._getURL(page_url, attempts=attempts)
         else:
             self._stream_url = stream_url
+
+        self._start_date = datetime.now()
 
         super().__init__(daemon=True)
 
@@ -81,12 +88,14 @@ class RadioStreamManager(Thread):
     _page_url : str = None
     _desired_redundancy : int = 2
     _desired_buffer_size : int = 307200
+    _desired_redundant_max_age_sec : int = 0
     _stream_start_attempts : int = 3
     _stream_failover_handlers : \
         List[Callable[[RadioStream, RadioStream], None]] = None
 
     def __init__(self, page_url : str, redundancy : int = 2, 
             buffer_size : int = 307200, start_attempts : int = 3,
+            redundant_max_age_sec : int = 0,
             on_stream_failover : Callable[[RadioStream, RadioStream], None] = None) -> None:
         if redundancy < 1:
             raise ValueError('Cannot have a redundancy less than 1')
@@ -99,6 +108,7 @@ class RadioStreamManager(Thread):
         self._desired_redundancy = redundancy
         self._desired_buffer_size = buffer_size
         self._stream_start_attempts = start_attempts
+        self._desired_redundant_max_age_sec = redundant_max_age_sec
         
         if on_stream_failover is not None:
             self.add_stream_failover_handler(on_stream_failover)
@@ -118,12 +128,24 @@ class RadioStreamManager(Thread):
         return result
 
     def _restore_redundancy(self):
+        max_age = timedelta(seconds=self._desired_redundant_max_age_sec)
+        now = datetime.now()
+
         with self._radio_stream_lock:
             # Prune dead streams
             for stream in self._redundant_radio_streams:
                 if not stream.is_alive():
                     self._redundant_radio_streams.remove(stream)
             
+            # Prune aged-out streams
+            for stream in self._redundant_radio_streams:
+                if (    len(self._redundant_radio_streams) > 1
+                            or self._desired_redundancy < 2
+                        ) \
+                        and now - stream.start_date > max_age:
+                    stream.stop()
+                    self._redundant_radio_streams.remove(stream)
+ 
             # Start up new streams
             new_streams_needed = self._desired_redundancy - \
                                     len(self._redundant_radio_streams)
@@ -200,7 +222,7 @@ class RedundantRadioStream(Thread):
             redundant_buffer_size : int = 307200,
             byte_buffer : ByteBuffer = None,
             cache_buffer_size : int = 307200, start_attempts : int = 3, 
-            sync_len : int = 10000) -> None:
+            redundant_max_age_sec : int = 0, sync_len : int = 10000) -> None:
         if byte_buffer is None:
             self._byte_buffer = ByteBuffer(redundant_buffer_size)
         else:
@@ -218,7 +240,8 @@ class RedundantRadioStream(Thread):
         self._radio_stream_manager = RadioStreamManager(page_url, 
                                         redundancy=redundancy, 
                                         buffer_size=cache_buffer_size, 
-                                        start_attempts=start_attempts)
+                                        start_attempts=start_attempts,
+                                        redundant_max_age_sec=redundant_max_age_sec)
         self._radio_stream_manager.add_stream_failover_handler(
             self.handleFailover)
 
@@ -283,6 +306,7 @@ class PersistentRedundantRadioStream(RedundantRadioStream):
             persistent_buffer_size: int = 50000, 
             cache_buffer_size : int = 307200, overwrite : bool = False, 
             should_write : bool = True, start_attempts: int = 3, 
+            redundant_max_age_sec : int = 0,
             sync_len: int = 10000) -> None:
         
         byteBuffer = PersistentByteBuffer(filepath, 
@@ -292,7 +316,8 @@ class PersistentRedundantRadioStream(RedundantRadioStream):
 
         super().__init__(page_url=page_url, redundancy=redundancy, 
             byte_buffer=byteBuffer, cache_buffer_size=cache_buffer_size, 
-            start_attempts=start_attempts, sync_len=sync_len)
+            start_attempts=start_attempts, sync_len=sync_len,
+            redundant_max_age_sec=redundant_max_age_sec)
     
     @property
     def filepath(self) -> str:
