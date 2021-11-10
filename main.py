@@ -115,6 +115,7 @@ def record_until(prrs : PersistentRedundantRadioStream,
     prrs.filepath = filePath
     prrs.should_write = True
 
+    log.debug(f"Will record until {endDate.strftime(DATETIME_CONSOLE_FORMAT)}")
     wait_until(endDate)
 
 def record_hour(prrs : PersistentRedundantRadioStream, 
