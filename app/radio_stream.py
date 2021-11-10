@@ -155,7 +155,7 @@ class RadioStreamManager(Thread):
                                     len(self._redundant_radio_streams)
 
             if new_streams_needed > 0:
-                log.debug(f"Starting {new_streams_needed} new radio streams have failed.")
+                log.debug(f"Starting {new_streams_needed} new radio streams.")
 
             for i in range(0, new_streams_needed):
                 self._redundant_radio_streams.append(self._start_new_stream())
