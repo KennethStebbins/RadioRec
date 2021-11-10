@@ -63,6 +63,7 @@ class RadioStream(Thread):
             raise RuntimeError("Failed to get a stream URL")
 
     def run(self) -> None:
+        log.debug(f"Radio stream {self.name} started.")
         with request('GET', self._stream_url, stream=True) as r:
             self._http_stream : HTTPResponse = r.raw
 
@@ -72,6 +73,7 @@ class RadioStream(Thread):
 
             while not self._http_stream.isclosed() and self._http_stream.readable():
                 self._byte_buffer.append(self._http_stream.read(8192))
+        log.debug(f"Radio stream {self.name} ended.")
     
     def stop(self) -> None:
         if self._http_stream is not None and not self._http_stream.closed:
@@ -135,6 +137,7 @@ class RadioStreamManager(Thread):
             # Prune dead streams
             for stream in self._redundant_radio_streams:
                 if not stream.is_alive():
+                    log.debug(f"Radio stream {stream.name} failed.")
                     self._redundant_radio_streams.remove(stream)
             
             # Prune aged-out streams
@@ -143,6 +146,7 @@ class RadioStreamManager(Thread):
                             or self._desired_redundancy < 2
                         ) \
                         and now - stream.start_date > max_age:
+                    log.debug(f"Radio stream {stream.name} aged out.")
                     stream.stop()
                     self._redundant_radio_streams.remove(stream)
  
@@ -151,7 +155,7 @@ class RadioStreamManager(Thread):
                                     len(self._redundant_radio_streams)
 
             if new_streams_needed > 0:
-                log.debug(f"{new_streams_needed} redundant radio streams have failed.")
+                log.debug(f"Starting {new_streams_needed} new radio streams have failed.")
 
             for i in range(0, new_streams_needed):
                 self._redundant_radio_streams.append(self._start_new_stream())
