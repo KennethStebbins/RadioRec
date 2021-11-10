@@ -153,6 +153,11 @@ def main() -> None:
             log.error(f"Failed to parse end date: {args.end_date}")
             log.info("Dates must be provided in this format: YYYY-MM-DD HH:MM:SS")
             exit(1)
+            
+        if endDate < datetime.now():
+            log.error(f"End date has already passed.")
+            exit(1)
+
 
     try:
         os.makedirs(args.output_dir, exist_ok=True)
