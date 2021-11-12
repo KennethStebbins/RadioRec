@@ -374,6 +374,7 @@ class PersistentByteBuffer(ByteBuffer):
     
     @should_write.setter
     def should_write(self, value : bool) -> None:
+        log.debug(f"Persistent Byte Buffer: Should write changed to {value}")
         self._should_write = value
         
     def _writeToFile(self, b : bytes) -> None:
