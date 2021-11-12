@@ -134,6 +134,8 @@ def main() -> None:
         log.setLevel(logging.DEBUG)
         log.debug("Verbose logging enabled")
 
+    log.debug(f"Output directory: {args.output_dir}")
+
     if args.start_date:
         try:
             startDate = datetime.strptime(args.start_date, DATETIME_PARSE_FORMAT)
