@@ -200,6 +200,8 @@ def main() -> None:
             record_until(prrs, args.output_dir, endDate)
     except KeyboardInterrupt:
         log.info("Stopping...")
+    except:
+        log.exception("Something went wrong while recording.")
     finally:
         prrs.writeAll()
         prrs.should_write = False
