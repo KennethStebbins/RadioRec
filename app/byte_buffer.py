@@ -382,8 +382,11 @@ class PersistentByteBuffer(ByteBuffer):
             return
 
         with self._file_lock:
-            with open(self._filepath, 'ab') as f:
-                f.write(b)
+            try:
+                with open(self._filepath, 'ab') as f:
+                    f.write(b)
+            except:
+                log.exception(f"Error writing bytes to file {self._filepath}")
     
     def append(self, b : bytes) -> None:
         bLen = len(b)
