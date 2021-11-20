@@ -48,7 +48,7 @@ def _prepLogger(filepath : str = None) -> logging.Logger:
         fileHandler = logging.FileHandler(filepath, 'a')
         fileHandler.setLevel(logging.DEBUG)
         formatter = logging.Formatter(r"[%(asctime)s][%(module)s.%(funcName)s()]" +
-                                        r"[T%(thread)d][%(levelname)s] %(message)s")
+                                        r"[T%(threadName)d][%(levelname)s] %(message)s")
         fileHandler.formatter = formatter
         log.addHandler(fileHandler)
 
