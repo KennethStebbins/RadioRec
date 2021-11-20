@@ -127,6 +127,8 @@ class RadioStreamManager(Thread):
                 result.start()
             except TimeoutException:
                 log.debug("RadioStream failed to start due to TimeoutException. Will try again.")
+            except:
+                log.exception("An unexpected exception occurred while trying to start a new RadioStream.")
         return result
 
     def _restore_redundancy(self):
@@ -194,11 +196,14 @@ class RadioStreamManager(Thread):
     def run(self):
         event = Event()
         while True:
-            prs = self._primary_radio_stream
-            if prs is None or not prs.is_alive():
-                log.debug(f"Primary stream failed. Replacing...")
-                self._replace_primary_stream()
-            self._restore_redundancy()
+            try:
+                prs = self._primary_radio_stream
+                if prs is None or not prs.is_alive():
+                    log.debug(f"Primary stream failed. Replacing...")
+                    self._replace_primary_stream()
+                self._restore_redundancy()
+            except:
+                log.exception("An unexpected exception occurred in RadioStreamManager.run().")
             event.wait(.250)
     
     @property
