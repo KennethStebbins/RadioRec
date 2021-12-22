@@ -204,7 +204,11 @@ class RadioStreamManager(Thread):
                 self._restore_redundancy()
             except:
                 log.exception("An unexpected exception occurred in RadioStreamManager.run().")
-            event.wait(.250)
+            try:
+                event.wait(.250)
+            except:
+                log.exception("An unexpected exception occurred in RadioStreamManager.run().")
+        log.info("RadioStreamManager has stopped.")
     
     @property
     def primary_radio_stream(self) -> RadioStream:
